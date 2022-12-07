@@ -245,6 +245,14 @@ afno_backbone_26var_lamb_embed1536_dpr05_depth24_e300_dt4:
   depth: 24
   max_epochs: 300
 
+afno_backbone_26var_lamb_embed1536_dpr05_depth24_dt4: 
+  <<: *26var_dt4
+  optimizer_type: 'FusedLAMB'
+  weight_decay: 1E-6
+  embed_dim: 1536
+  drop_path_rate: 0.5
+  depth: 24
+
 afno_backbone_26var_lamb_embed1536_dpr03_dt4_decode: 
   <<: *26var_dt4
   optimizer_type: 'FusedLAMB'
