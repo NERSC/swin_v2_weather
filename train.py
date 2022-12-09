@@ -196,6 +196,18 @@ class Trainer():
     if params.log_to_screen:
       logging.info("Number of trainable model parameters: {}".format(self.count_parameters()))
 
+  def compute_grad_norm(self, p_list):
+    norm_type = 2.0
+    grads = [p.grad for p in p_list if p.grad is not None]
+    total_norm = torch.norm(torch.stack([torch.norm(g.detach(), norm_type).to(self.params.device) for g in grads]), norm_type)
+    return total_norm
+#    grad_norm = 0
+#    for p in p_list:
+#        param_g_norm = p.grad.detach().data.norm(2)
+#        grad_norm += param_g_norm.item()**2
+#    grad_norm = grad_norm**0.5
+#    return grad_norm
+
   def switch_off_grad(self, model):
     for param in model.parameters():
       param.requires_grad = False
@@ -307,12 +319,14 @@ class Trainer():
       if self.params.enable_amp:
         self.gscaler.update()
 
+      g_norm = self.compute_grad_norm(self.model.parameters())
+
       tr_time += time.time() - tr_start
     
     try:
-        logs = {'loss': loss, 'loss_step_one': loss_step_one, 'loss_step_two': loss_step_two}
+        logs = {'loss': loss, 'loss_step_one': loss_step_one, 'loss_step_two': loss_step_two, 'grad_norm': g_norm}
     except:
-        logs = {'loss': loss}
+        logs = {'loss': loss, 'grad_norm': g_norm}
 
     if dist.is_initialized():
       for key in sorted(logs.keys()):
