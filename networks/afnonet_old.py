@@ -227,7 +227,7 @@ class AFNONet(nn.Module):
 
         depth = params.depth
 
-        self.use_spec = True
+        self.use_spec = False
         self.dfs = False
         if self.dfs:
             self.img_size = (2*img_size[0], img_size[1])
