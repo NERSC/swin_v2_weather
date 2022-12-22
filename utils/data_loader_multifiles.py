@@ -55,7 +55,7 @@ from torch import Tensor
 import h5py
 import math
 #import cv2
-from utils.img_utils import reshape_fields, reshape_precip
+from utils.img_utils import reshape_fields, reshape_precip, interpolate
 
 
 def get_data_loader(params, files_pattern, distributed, train):
@@ -90,7 +90,13 @@ class GetDataset(Dataset):
     self.crop_size_x = params.crop_size_x
     self.crop_size_y = params.crop_size_y
     self.roll = params.roll
+
+    self.interp_factor_x = params.interp_factor_x
+    self.interp_factor_y = params.interp_factor_y
+    self.interp_factor = (self.interp_factor_x, self.interp_factor_y)
+
     self._get_files_stats()
+
     self.two_step_training = params.two_step_training
     self.orography = params.orography
     self.precip = True if "precip" in params else False
@@ -134,6 +140,8 @@ class GetDataset(Dataset):
     logging.info("Found data at path {}. Number of examples: {}. Image Shape: {} x {} x {}".format(self.location, self.n_samples_total, self.img_shape_x, self.img_shape_y, self.n_in_channels))
     logging.info("Delta t: {} hours".format(6*self.dt))
     logging.info("Including {} hours of past history in training at a frequency of {} hours".format(6*self.dt*self.n_history, 6*self.dt))
+    self.img_shape_x //= self.interp_factor_x
+    self.img_shape_y //= self.interp_factor_y
 
   def _open_file(self, year_idx):
     _file = h5py.File(self.files_paths[year_idx], 'r')
@@ -190,8 +198,8 @@ class GetDataset(Dataset):
         orog = None
 
     if self.train and (self.crop_size_x or self.crop_size_y):
-      rnd_x = random.randint(0, self.img_shape_x-self.crop_size_x)
-      rnd_y = random.randint(0, self.img_shape_y-self.crop_size_y)    
+      rnd_x = random.randint(0, self.img_shape_x*self.interp_factor_x-self.crop_size_x)
+      rnd_y = random.randint(0, self.img_shape_y*self.interp_factor_y-self.crop_size_y)    
     else: 
       rnd_x = 0
       rnd_y = 0
@@ -201,8 +209,13 @@ class GetDataset(Dataset):
                 reshape_precip(self.precip_files[year_idx][tar_local_idx+step], 'tar', self.crop_size_x, self.crop_size_y, rnd_x, rnd_y, self.params, y_roll, self.train)
     else:
         if self.two_step_training:
-            return reshape_fields(self.files[year_idx][(local_idx-self.dt*self.n_history):(local_idx+self.dt):self.dt, self.in_channels], 'inp', self.crop_size_x, self.crop_size_y, rnd_x, rnd_y,self.params, y_roll, self.train, self.normalize, orog, self.add_noise), \
+            inp, tar = reshape_fields(self.files[year_idx][(local_idx-self.dt*self.n_history):(local_idx+self.dt):self.dt, self.in_channels], 'inp', self.crop_size_x, self.crop_size_y, rnd_x, rnd_y,self.params, y_roll, self.train, self.normalize, orog, self.add_noise), \
                     reshape_fields(self.files[year_idx][local_idx + step:local_idx + step + 2*step:self.dt, self.out_channels], 'tar', self.crop_size_x, self.crop_size_y, rnd_x, rnd_y, self.params, y_roll, self.train, self.normalize, orog)
         else:
-            return reshape_fields(self.files[year_idx][(local_idx-self.dt*self.n_history):(local_idx+self.dt):self.dt, self.in_channels], 'inp', self.crop_size_x, self.crop_size_y, rnd_x, rnd_y,self.params, y_roll, self.train, self.normalize, orog, self.add_noise), \
+            inp, tar = reshape_fields(self.files[year_idx][(local_idx-self.dt*self.n_history):(local_idx+self.dt):self.dt, self.in_channels], 'inp', self.crop_size_x, self.crop_size_y, rnd_x, rnd_y,self.params, y_roll, self.train, self.normalize, orog, self.add_noise), \
                     reshape_fields(self.files[year_idx][local_idx + step, self.out_channels], 'tar', self.crop_size_x, self.crop_size_y, rnd_x, rnd_y, self.params, y_roll, self.train, self.normalize, orog)
+
+    if self.interp_factor_x != 1 or self.interp_factor_y != 1:
+        inp, tar = interpolate(inp, tar, self.interp_factor)
+
+    return inp, tar

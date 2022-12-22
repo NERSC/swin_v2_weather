@@ -221,7 +221,7 @@ class AFNONet(nn.Module):
         ):
         super().__init__()
         self.params = params
-        self.img_size = img_size
+        self.img_size = (params.img_shape_x, params.img_shape_y)
         self.patch_size = (params.patch_size, params.patch_size)
         self.in_chans = params.N_in_channels
         self.out_chans = params.N_out_channels
@@ -237,7 +237,8 @@ class AFNONet(nn.Module):
         self.dfs = False
         if self.dfs:
             self.img_size = (2*img_size[0], img_size[1])
-        self.spec_filt = torch.tensor(spectral_filter(img_size[0], img_size[1]//2+1)).to(self.params.device, dtype=torch.float)
+        if self.use_spec:
+            self.spec_filt = torch.tensor(spectral_filter(img_size[0], img_size[1]//2+1)).to(self.params.device, dtype=torch.float)
 
         self.patch_embed = PatchEmbed(img_size=self.img_size, patch_size=self.patch_size, in_chans=self.in_chans, embed_dim=embed_dim)
         num_patches = self.patch_embed.num_patches

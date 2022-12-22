@@ -72,6 +72,12 @@ full_field: &FULL_FIELD
   add_extra_years: !!bool False
   depth: 12
 
+  interp_factor_x: 1
+  interp_factor_y: 1
+
+  project: 'highresmip'
+  entity: 'climate'
+
 afno_backbone: &backbone
   <<: *FULL_FIELD
   log_to_wandb: !!bool True
@@ -102,6 +108,19 @@ afno_backbone_26var: &26var
   global_means_path: '/pscratch/sd/j/jpathak/34var/stats/global_means.npy'
   global_stds_path:  '/pscratch/sd/j/jpathak/34var/stats/global_stds.npy'
 
+afno_backbone_26var_50km:
+  <<: *backbone
+  interp_factor_x: 2
+  interp_factor_y: 2
+  in_channels: [0, 1 ,2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+  out_channels: [0, 1 ,2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+  train_data_path:   '/pscratch/sd/j/jpathak/34var/train'
+  valid_data_path:   '/pscratch/sd/j/jpathak/34var/test'
+  inf_data_path:     '/pscratch/sd/j/jpathak/34var/out_of_sample'
+  time_means_path:   '/pscratch/sd/j/jpathak/34var/new_stats/time_means.npy'
+  global_means_path: '/pscratch/sd/j/jpathak/34var/new_stats/global_means.npy'
+  global_stds_path:  '/pscratch/sd/j/jpathak/34var/new_stats/global_stds.npy'
+
 afno_backbone_26var_lamb:
   <<: *26var
   optimizer_type: 'FusedLAMB'
@@ -118,12 +137,6 @@ afno_backbone_26var_lamb_rmse:
   optimizer_type: 'FusedLAMB'
   weight_decay: 1E-6
   rmse_loss: !!bool True
-
-afno_backbone_26var_lamb_residual:
-  <<: *26var
-  optimizer_type: 'FusedLAMB'
-  weight_decay: 1E-6
-  target: 'residual_field' 
 
 afno_backbone_26var_lamb_res:
   <<: *26var
@@ -155,34 +168,6 @@ afno_backbone_26var_lamb_finetune:
   prediction_length: 41 #applicable only if prediction_type == 'iterative'
   pretrained_ckpt_path: '/pscratch/sd/s/shas1693/results/era5_wind/afno_backbone_26var_lamb/0/training_checkpoints/best_ckpt.tar'
 
-afno_backbone_26var_lamb_rmse_finetune: 
-  <<: *26var
-  rmse_loss: !!bool True
-  optimizer_type: 'FusedLAMB'
-  weight_decay: 1E-6
-  lr: 1E-4
-  batch_size: 64
-  log_to_wandb: !!bool True
-  max_epochs: 50
-  pretrained: !!bool True
-  two_step_training: !!bool True
-  prediction_length: 41 #applicable only if prediction_type == 'iterative'
-  pretrained_ckpt_path: '/pscratch/sd/s/shas1693/results/era5_wind/afno_backbone_26var_lamb_rmse/0/training_checkpoints/best_ckpt.tar'
-
-afno_backbone_26var_lamb_res_finetune: 
-  <<: *26var
-  residual: !!bool True
-  optimizer_type: 'FusedLAMB'
-  weight_decay: 1E-6
-  lr: 1E-4
-  batch_size: 64
-  log_to_wandb: !!bool True
-  max_epochs: 50
-  pretrained: !!bool True
-  two_step_training: !!bool True
-  prediction_length: 41 #applicable only if prediction_type == 'iterative'
-  pretrained_ckpt_path: '/pscratch/sd/s/shas1693/results/era5_wind/afno_backbone_26var_lamb_res/0/training_checkpoints/best_ckpt.tar'
-
 afno_backbone_26var_dt4: &26var_dt4
   <<: *backbone
   dt: 4 # how many timesteps ahead the model will predict
@@ -195,38 +180,6 @@ afno_backbone_26var_dt4: &26var_dt4
   global_means_path: '/pscratch/sd/j/jpathak/34var/stats/global_means.npy'
   global_stds_path:  '/pscratch/sd/j/jpathak/34var/stats/global_stds.npy'
 
-afno_backbone_26var_lamb_dt4_p4:
-  <<: *26var_dt4
-  optimizer_type: 'FusedLAMB'
-  weight_decay: 1E-6
-  embed_dim: 768
-  patch_size: 4
-
-afno_backbone_26var_lamb_dt4_p4_embed1024:
-  <<: *26var_dt4
-  optimizer_type: 'FusedLAMB'
-  weight_decay: 1E-6
-  embed_dim: 1024
-  patch_size: 4
-
-afno_backbone_26var_lamb_dt4: 
-  <<: *26var_dt4
-  optimizer_type: 'FusedLAMB'
-  weight_decay: 1E-6
-
-afno_backbone_26var_lamb_absloss_dt4: 
-  <<: *26var_dt4
-  optimizer_type: 'FusedLAMB'
-  weight_decay: 1E-6
-  relative_loss: !!bool False
-
-afno_backbone_26var_lamb_embed1536_dt4: 
-  <<: *26var_dt4
-  optimizer_type: 'FusedLAMB'
-  weight_decay: 1E-6
-  embed_dim: 1536
-
-
 afno_backbone_26var_lamb_embed1536_dpr05_depth24_twoyears_dt4: 
   <<: *26var_dt4
   optimizer_type: 'FusedLAMB'
@@ -235,39 +188,6 @@ afno_backbone_26var_lamb_embed1536_dpr05_depth24_twoyears_dt4:
   drop_path_rate: 0.5
   depth: 24
   add_extra_years: !!bool True
-
-afno_backbone_26var_lamb_embed1536_dpr05_depth24_e300_dt4: 
-  <<: *26var_dt4
-  optimizer_type: 'FusedLAMB'
-  weight_decay: 1E-6
-  embed_dim: 1536
-  drop_path_rate: 0.5
-  depth: 24
-  max_epochs: 300
-
-afno_backbone_26var_lamb_embed1536_dpr05_depth24_dt4: 
-  <<: *26var_dt4
-  optimizer_type: 'FusedLAMB'
-  weight_decay: 1E-6
-  embed_dim: 1536
-  drop_path_rate: 0.5
-  depth: 24
-
-afno_backbone_26var_lamb_embed1536_dpr03_dt4_decode: 
-  <<: *26var_dt4
-  optimizer_type: 'FusedLAMB'
-  weight_decay: 1E-6
-  embed_dim: 1536
-  drop_path_rate: 0.3
-
-afno_backbone_26var_lamb_embed1536_dpr03_dr01_scale2_dt4_decode: 
-  <<: *26var_dt4
-  optimizer_type: 'FusedLAMB'
-  weight_decay: 1E-6
-  embed_dim: 1536
-  drop_path_rate: 0.3
-  decoder_scale: 2
-  drop_rate: 0.1
 
 afno_backbone_26var_lamb_embed1536_dpr03_dt4_newstats: 
   <<: *26var_dt4
@@ -278,48 +198,6 @@ afno_backbone_26var_lamb_embed1536_dpr03_dt4_newstats:
   time_means_path:   '/pscratch/sd/j/jpathak/34var/new_stats/time_means.npy'
   global_means_path: '/pscratch/sd/j/jpathak/34var/new_stats/global_means.npy'
   global_stds_path:  '/pscratch/sd/j/jpathak/34var/new_stats/global_stds.npy'
-
-afno_backbone_26var_lamb_embed2048_dpr03_dr0.1_dt4: 
-  <<: *26var_dt4
-  optimizer_type: 'FusedLAMB'
-  weight_decay: 1E-6
-  embed_dim: 2048
-  drop_rate: 0.1
-  drop_path_rate: 0.3
-
-afno_backbone_26var_lamb_embed1536_dpr03_lr1em3_twoyears_dt4: 
-  <<: *26var_dt4
-  optimizer_type: 'FusedLAMB'
-  weight_decay: 1E-6
-  lr: 1E-3
-  embed_dim: 1536
-  drop_path_rate: 0.3
-
-afno_backbone_26var_dt4_finetune: 
-  <<: *26var_dt4
-  lr: 1E-4
-  batch_size: 64
-  log_to_wandb: !!bool True
-  max_epochs: 50
-  pretrained: !!bool True
-  two_step_training: !!bool True
-  prediction_length: 41 #applicable only if prediction_type == 'iterative'
-  pretrained_ckpt_path: '/pscratch/sd/s/shas1693/results/era5_wind/afno_backbone_26var_dt4/0/training_checkpoints/best_ckpt.tar'
-
-afno_backbone_26var_lamb_dt4_p4_finetune:
-  <<: *26var_dt4
-  optimizer_type: 'FusedLAMB'
-  weight_decay: 1E-6
-  embed_dim: 768
-  patch_size: 4
-  lr: 1E-4
-  batch_size: 64
-  log_to_wandb: !!bool True
-  max_epochs: 50
-  pretrained: !!bool True
-  two_step_training: !!bool True
-  prediction_length: 41 #applicable only if prediction_type == 'iterative'
-  pretrained_ckpt_path: '/pscratch/sd/s/shas1693/results/era5_wind/afno_backbone_26var_lamb_dt4_p4/0/training_checkpoints/best_ckpt.tar'
 
 check:
   <<: *backbone

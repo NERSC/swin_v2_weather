@@ -58,9 +58,10 @@ from torch.utils.data.distributed import DistributedSampler
 from torch import Tensor
 import h5py
 import math
-import torchvision.transforms.functional as TF
+import torchvision.transforms as T
 import matplotlib
 import matplotlib.pyplot as plt
+from skimage.transform import resize
 
 class PeriodicPad2d(nn.Module):
     """ 
@@ -78,6 +79,17 @@ class PeriodicPad2d(nn.Module):
         out = F.pad(out, (0, 0, self.pad_width, self.pad_width), mode="constant", value=0) 
         return out
 
+def interpolate(inp, tar, scale):
+    sh = inp.shape
+    transform = T.Resize((sh[1]//scale[0], sh[2]//scale[1]))
+    return transform(inp), transform(tar)
+
+def interpolate_skimage(img, scale):
+    sh = img.shape
+    img = img.reshape((sh[2], sh[3], sh[0]*sh[1]))
+    img_resize = resize(img, (sh[2]//scale[0], sh[3]//scale[1], sh[0]*sh[1]), anti_aliasing=True)
+    return img_resize.reshape((sh[0], sh[1], sh[2]//scale[1], sh[3]//scale[1]))
+
 def reshape_fields(img, inp_or_tar, crop_size_x, crop_size_y,rnd_x, rnd_y, params, y_roll, train, normalize=True, orog=None, add_noise=False):
     #Takes in np array of size (n_history+1, c, h, w) and returns torch tensor of size ((n_channels*(n_history+1), crop_size_x, crop_size_y)
 
@@ -86,6 +98,7 @@ def reshape_fields(img, inp_or_tar, crop_size_x, crop_size_y,rnd_x, rnd_y, param
 
     
     img = img[:, :, 0:720] #remove last pixel
+
     n_history = np.shape(img)[0] - 1
     img_shape_x = np.shape(img)[-2]
     img_shape_y = np.shape(img)[-1]
