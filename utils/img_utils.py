@@ -62,6 +62,7 @@ import torchvision.transforms as T
 import matplotlib
 import matplotlib.pyplot as plt
 from skimage.transform import resize
+import scipy.ndimage as ndi
 
 class PeriodicPad2d(nn.Module):
     """ 
@@ -84,7 +85,12 @@ def interpolate(inp, tar, scale):
     transform = T.Resize((sh[1]//scale[0], sh[2]//scale[1]))
     return transform(inp), transform(tar)
 
+def interpolate_ndi(img, scale):
+    new_img = ndi.zoom(img, (1, 1, 1/scale[0], 1/scale[1]))
+    return new_img
+
 def interpolate_skimage(img, scale):
+    ''' this doesn't work '''
     sh = img.shape
     img = img.reshape((sh[2], sh[3], sh[0]*sh[1]))
     img_resize = resize(img, (sh[2]//scale[0], sh[3]//scale[1], sh[0]*sh[1]), anti_aliasing=True)
