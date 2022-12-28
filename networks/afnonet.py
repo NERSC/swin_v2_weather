@@ -257,7 +257,7 @@ class AFNONet(nn.Module):
             num_blocks=self.num_blocks, sparsity_threshold=sparsity_threshold, hard_thresholding_fraction=hard_thresholding_fraction) 
         for i in range(depth)])
 
-        self.norm = norm_layer(embed_dim)
+        #self.norm = norm_layer(embed_dim)
 
         self.head = nn.Linear(embed_dim, self.out_chans*self.patch_size[0]*self.patch_size[1], bias=False)
 

@@ -61,7 +61,7 @@ import math
 import torchvision.transforms as T
 import matplotlib
 import matplotlib.pyplot as plt
-from skimage.transform import resize
+from skimage.transform import resize, downscale_local_mean
 import scipy.ndimage as ndi
 
 class PeriodicPad2d(nn.Module):
@@ -90,11 +90,12 @@ def interpolate_ndi(img, scale):
     return new_img
 
 def interpolate_skimage(img, scale):
-    ''' this doesn't work '''
-    sh = img.shape
-    img = img.reshape((sh[2], sh[3], sh[0]*sh[1]))
-    img_resize = resize(img, (sh[2]//scale[0], sh[3]//scale[1], sh[0]*sh[1]), anti_aliasing=True)
-    return img_resize.reshape((sh[0], sh[1], sh[2]//scale[1], sh[3]//scale[1]))
+#    sh = img.shape
+#    img = img.reshape((sh[2], sh[3], sh[0]*sh[1]))
+#    img_resize = resize(img, (sh[2]//scale[0], sh[3]//scale[1], sh[0]*sh[1]), anti_aliasing=True)
+#    return img_resize.reshape((sh[0], sh[1], sh[2]//scale[1], sh[3]//scale[1]))
+    new_img = downscale_local_mean(img, (1, 1, scale[0], scale[1]))
+    return new_img
 
 def reshape_fields(img, inp_or_tar, crop_size_x, crop_size_y,rnd_x, rnd_y, params, y_roll, train, normalize=True, orog=None, add_noise=False):
     #Takes in np array of size (n_history+1, c, h, w) and returns torch tensor of size ((n_channels*(n_history+1), crop_size_x, crop_size_y)
@@ -223,5 +224,14 @@ def vis_precip(fields):
     return fig
 
 
+def vis(fields):
+    pred, tar = fields
+    fig, ax = plt.subplots(1, 2, figsize=(24,12))
+    ax[0].imshow(pred, cmap="turbo")
+    ax[0].set_title("pred")
+    ax[1].imshow(tar, cmap="turbo")
+    ax[1].set_title("tar")
+    fig.tight_layout()
+    return fig
     
 

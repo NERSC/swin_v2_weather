@@ -72,6 +72,7 @@ import wandb
 import matplotlib.pyplot as plt
 import glob
 from datetime import datetime
+from skimage.transform import downscale_local_mean
 
 
 fld = "z500" # diff flds have diff decor times and hence differnt ics
@@ -80,6 +81,10 @@ if fld == "z500" or fld == "2m_temperature" or fld == "t850":
 else:
     DECORRELATION_TIME = 8 # 9 days (36) for z500, 2 (8 steps) days for u10, v10
 idxes = {"u10":0, "z500":14, "2m_temperature":2, "v10":1, "t850":5}
+
+def downscale(img, scale):
+    new_img = downscale_local_mean(img, (1, 1, scale[0], scale[1]))
+    return new_img
 
 def gaussian_perturb(x, level=0.01, device=0):
     noise = level * torch.randn(x.shape).to(device, dtype=torch.float)
@@ -188,6 +193,8 @@ def autoregressive_inference(params, ic, valid_data_full, model):
       maskarray = torch.as_tensor(np.load(params.maskpath)[0:720]).to(device, dtype=torch.float)
 
     valid_data = valid_data_full[ic:(ic+prediction_length*dt+n_history*dt):dt, in_channels, 0:720] #extract valid data from first year
+    if params.interp_factor_x != 1 or params.interp_factor_y != 1:
+        valid_data = downscale(valid_data, scale = (params.interp_factor_x, params.interp_factor_y))
     # standardize
     valid_data = (valid_data - means)/stds
     valid_data = torch.as_tensor(valid_data).to(device, dtype=torch.float)

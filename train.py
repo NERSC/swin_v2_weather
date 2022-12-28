@@ -64,7 +64,7 @@ logging_utils.config_logger()
 from utils.YParams import YParams
 from utils.data_loader_multifiles import get_data_loader
 from networks.afnonet import AFNONet, PrecipNet
-from utils.img_utils import vis_precip
+from utils.img_utils import vis
 import wandb
 from utils.weighted_acc_rmse import weighted_acc, weighted_rmse, weighted_rmse_torch, unlog_tp_torch
 from apex import optimizers
@@ -77,16 +77,28 @@ import json
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap as ruamelDict
 
+def set_seed(params, world_size):
+    seed = params.seed
+    if seed is None:
+        seed = np.random.randint(10000)
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if world_size > 0:
+        torch.cuda.manual_seed_all(seed)
+
 class Trainer():
   def count_parameters(self):
     return sum(p.numel() for p in self.model.parameters() if p.requires_grad)
 
   def __init__(self, params, args):
     self.sweep_id = args.sweep_id
-    self.root_dir = args.root_dir
+    self.root_dir = params['exp_dir'] 
     self.config = args.config
 
-    params['amp'] = args.amp
+    params['enable_amp'] = args.enable_amp
+    params['epsilon_factor'] = args.epsilon_factor
+
     self.world_size = 1
     if 'WORLD_SIZE' in os.environ:
       self.world_size = int(os.environ['WORLD_SIZE'])
@@ -102,14 +114,9 @@ class Trainer():
     torch.cuda.set_device(self.local_rank)
     torch.backends.cudnn.benchmark = True
     
-    if self.world_rank==0:
-      params.log()
-
     self.log_to_screen = params.log_to_screen and self.world_rank==0
     self.log_to_wandb = params.log_to_wandb and self.world_rank==0
   
-    set_seed(params, self.world_size)
-
     self.device = torch.cuda.current_device()
     self.params = params
     self.params.device = self.device
@@ -117,29 +124,31 @@ class Trainer():
     self.params['name'] = args.config + '_' + str(args.run_num)
     self.params['group'] = "era5_" + args.config
 
+    self.config = args.config 
+    self.run_num = args.run_num
+
   def build_and_launch(self):
     self.params['in_channels'] = np.array(self.params['in_channels'])
     self.params['out_channels'] = np.array(self.params['out_channels'])
     self.params['N_in_channels'] = len(self.params['in_channels'])
     self.params['N_out_channels'] = len(self.params['out_channels'])
-    self.params['global_batch_size'] = self.params.batch_size
-    self.params['batch_size'] = int(self.params.batch_size//self.world_size)
 
     # init wandb
     if self.sweep_id:
       jid = os.environ['SLURM_JOBID'] # so different sweeps dont resume
       exp_dir = os.path.join(*[self.root_dir, 'sweeps', self.sweep_id, self.config, jid])
     else:
-      exp_dir = os.path.join(*[self.root_dir, 'expts', self.config, self.run_num])
+      exp_dir = os.path.join(*[self.root_dir, self.config, self.run_num])
 
     if self.world_rank==0:
       if not os.path.isdir(exp_dir):
         os.makedirs(exp_dir)
-        os.makedirs(os.path.join(exp_dir, 'checkpoints/'))
+        os.makedirs(os.path.join(exp_dir, 'training_checkpoints/'))
         os.makedirs(os.path.join(exp_dir, 'wandb/'))
 
     self.params['experiment_dir'] = os.path.abspath(exp_dir)
-    self.params['checkpoint_path'] = os.path.join(exp_dir, 'checkpoints/ckpt.tar')
+    self.params['checkpoint_path'] = os.path.join(exp_dir, 'training_checkpoints/ckpt.tar')
+    self.params['best_checkpoint_path'] = os.path.join(exp_dir, 'training_checkpoints/best_ckpt.tar')
     self.params['resuming'] = True if os.path.isfile(self.params.checkpoint_path) else False
     if self.log_to_wandb:
       if self.sweep_id:
@@ -152,7 +161,7 @@ class Trainer():
         wandb.init(dir=os.path.join(exp_dir, "wandb"),
                     config=self.params.params, name=self.params.name, group=self.params.group, project=self.params.project, 
                     entity=self.params.entity, resume=self.params.resuming)
-
+        logging.info(self.params.log())
 
     if self.sweep_id and dist.is_initialized():
       from mpi4py import MPI
@@ -164,11 +173,14 @@ class Trainer():
       self.params = comm.bcast(self.params, root=0)
       self.params.device = self.device # dont broadcast 0s device
 
-    set_seed(self.params, self.world_size)
+    # set_seed(self.params, self.world_size)
 
     if self.world_rank==0:
       logging_utils.log_to_file(logger_name=None, log_filename=os.path.join(exp_dir, 'out.log'))
       logging_utils.log_versions()
+
+    self.params['global_batch_size'] = self.params.batch_size
+    self.params['batch_size'] = int(self.params.batch_size//self.world_size)
 
     # dump the yaml used
     if self.world_rank == 0:
@@ -214,7 +226,7 @@ class Trainer():
       if dist.is_initialized():
         self.model_wind = DistributedDataParallel(self.model_wind,
                                             device_ids=[self.local_rank],
-                                            output_device=[self.local_rank], find_unused_parameters=True)
+                                            output_device=[self.local_rank],find_unused_parameters=True)
       self.load_model_wind(self.params.model_wind_path)
       self.switch_off_grad(self.model_wind) # no backprop through the wind model
 
@@ -236,7 +248,7 @@ class Trainer():
       # NHWC: Convert model to channels_last memory format
       self.model = self.model.to(memory_format=torch.channels_last)
 
-    if self.params.log_to_wandb:
+    if self.log_to_wandb:
       wandb.watch(self.model)
 
     if self.params.optimizer_type == 'FusedAdam':
@@ -252,7 +264,7 @@ class Trainer():
     if dist.is_initialized():
       self.model = DistributedDataParallel(self.model,
                                            device_ids=[self.local_rank],
-                                           output_device=[self.local_rank],find_unused_parameters=True)
+                                           output_device=[self.local_rank],find_unused_parameters=False)
 
     self.iters = 0
     self.startEpoch = 0
@@ -277,8 +289,8 @@ class Trainer():
     else:
       self.scheduler = None
 
-    if self.params.log_to_screen:
-      logging.info(self.model)
+    if self.log_to_screen:
+      #logging.info(self.model)
       logging.info("Number of trainable model parameters: {}".format(self.count_parameters()))
 
     # launch training
@@ -296,7 +308,7 @@ class Trainer():
       param.requires_grad = False
 
   def train(self):
-    if self.params.log_to_screen:
+    if self.log_to_screen:
       logging.info("Starting Training Loop...")
 
     best_valid_loss = 1.e6
@@ -321,7 +333,7 @@ class Trainer():
           logging.info("Terminating training after reaching params.max_epochs while LR scheduler is set to CosineAnnealingLR")
           exit()
 
-      if self.params.log_to_wandb:
+      if self.log_to_wandb:
         for pg in self.optimizer.param_groups:
           lr = pg['lr']
         wandb.log({'lr': lr})
@@ -335,7 +347,7 @@ class Trainer():
             self.save_checkpoint(self.params.best_checkpoint_path)
             best_valid_loss = valid_logs['valid_loss']
 
-      if self.params.log_to_screen:
+      if self.log_to_screen:
         logging.info('Time taken for epoch {} is {} sec'.format(epoch + 1, time.time()-start))
         logging.info('Train loss: {}. Valid loss: {}'.format(train_logs['loss'], valid_logs['valid_loss']))
 
@@ -348,6 +360,9 @@ class Trainer():
     
     for i, data in enumerate(self.train_data_loader, 0):
       self.iters += 1
+    
+      if i > 10:
+        break
 
       # adjust_LR(optimizer, params, iters)
       data_start = time.time()
@@ -412,7 +427,7 @@ class Trainer():
         dist.all_reduce(logs[key].detach())
         logs[key] = float(logs[key]/dist.get_world_size())
 
-    if self.params.log_to_wandb:
+    if self.log_to_wandb:
       wandb.log(logs, step=self.epoch)
 
     return tr_time, data_time, logs
@@ -434,10 +449,10 @@ class Trainer():
 
     valid_start = time.time()
 
-    sample_idx = np.random.randint(len(self.valid_data_loader))
+    sample_idx = np.random.randint((n_valid_batches))
     with torch.no_grad():
       for i, data in enumerate(self.valid_data_loader, 0):
-        if (not self.precip) and i>=n_valid_batches:
+        if i>=n_valid_batches:
           break    
         inp, tar  = map(lambda x: x.to(self.device, dtype = torch.float), data)
         if self.params.orography and self.params.two_step_training:
@@ -467,7 +482,7 @@ class Trainer():
 
         valid_steps += 1.
         # save fields for vis before log norm 
-        if (i == sample_idx) and (self.precip and self.params.log_to_wandb):
+        if (i == sample_idx) and self.log_to_wandb:
           fields = [gen[0,0].detach().cpu().numpy(), tar[0,0].detach().cpu().numpy()]
 
         if self.precip:
@@ -485,18 +500,6 @@ class Trainer():
                 valid_weighted_rmse += weighted_rmse_torch((gen + inp), (tar + inp))
             else:
                 valid_weighted_rmse += weighted_rmse_torch(gen, tar)
-
-
-        if not self.precip:
-            try:
-                os.mkdir(params['experiment_dir'] + "/" + str(i))
-            except:
-                pass
-            #save first channel of image
-            if self.params.two_step_training:
-                save_image(torch.cat((gen_step_one[0,0], torch.zeros((self.valid_dataset.img_shape_x, 4)).to(self.device, dtype = torch.float), tar[0,0]), axis = 1), params['experiment_dir'] + "/" + str(i) + "/" + str(self.epoch) + ".png")
-            else:
-                save_image(torch.cat((gen[0,0], torch.zeros((self.valid_dataset.img_shape_x, 4)).to(self.device, dtype = torch.float), tar[0,0]), axis = 1), params['experiment_dir'] + "/" + str(i) + "/" + str(self.epoch) + ".png")
 
            
     if dist.is_initialized():
@@ -523,19 +526,18 @@ class Trainer():
       except:
         logs = {'valid_l1': valid_buff_cpu[1], 'valid_loss': valid_buff_cpu[0], 'valid_rmse_u10': valid_weighted_rmse_cpu[0]}#, 'valid_rmse_v10': valid_weighted_rmse[1]}
     
-    if self.params.log_to_wandb:
-      if self.precip:
-        fig = vis_precip(fields)
-        logs['vis'] = wandb.Image(fig)
-        plt.close(fig)
+    if self.log_to_wandb:
+      fig = vis(fields)
+      logs['vis'] = wandb.Image(fig)
+      plt.close(fig)
       wandb.log(logs, step=self.epoch)
 
     return valid_time, logs
 
   def load_model_wind(self, model_path):
-    if self.params.log_to_screen:
+    if self.log_to_screen:
       logging.info('Loading the wind model weights from {}'.format(model_path))
-    checkpoint = torch.load(model_path, map_location='cuda:{}'.format(self.params.local_rank))
+    checkpoint = torch.load(model_path, map_location='cuda:{}'.format(self.local_rank))
     if dist.is_initialized():
       self.model_wind.load_state_dict(checkpoint['model_state'])
     else:
@@ -563,7 +565,7 @@ class Trainer():
   def restore_checkpoint(self, checkpoint_path):
     """ We intentionally require a checkpoint_dir to be passed
         in order to allow Ray Tune to use this function """
-    checkpoint = torch.load(checkpoint_path, map_location='cuda:{}'.format(self.params.local_rank))
+    checkpoint = torch.load(checkpoint_path, map_location='cuda:{}'.format(self.local_rank))
     try:
         self.model.load_state_dict(checkpoint['model_state'])
     except:
