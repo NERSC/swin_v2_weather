@@ -235,3 +235,41 @@ def vis(fields):
     return fig
     
 
+def get_fields(pl, sl, inp_or_tar, params, train, add_noise=False):
+    if len(np.shape(pl)) == 4:
+      pl = np.expand_dims(pl, 0)
+    if len(np.shape(sl)) == 3:
+      sl = np.expand_dims(sl, 0)
+
+    (n_history, n_pl_vars, n_levels, img_shape_x, img_shape_y) = np.shape(pl)
+    n_history -= 1
+    img_shape_x -= 1 # remove last pixel
+    pl = pl[:,:,:,0:img_shape_x]
+    sl = sl[:,:,0:img_shape_x]
+    n_sl_vars = np.shape(sl)
+
+    pllist = []
+    for i in range(n_pl_vars): # for each variable 
+        pllist.append(pl[:, i, ...])
+    pl = np.concatenate(pllist, axis=1)
+    img = np.concatenate([pl, sl], axis=1)
+
+    n_channels = img.shape[1]
+
+    means = np.load(params.global_means_path)
+    stds = np.load(params.global_stds_path)
+    img -= means
+    img /= stds
+
+    if inp_or_tar == 'inp':
+        img = np.reshape(img, (n_channels*(n_history+1), img_shape_x, img_shape_y))
+    elif inp_or_tar == 'tar':
+        if params.two_step_training:
+            img = np.reshape(img, (n_channels*2, img_shape_x, img_shape_y))
+        else:
+            img = np.reshape(img, (n_channels, img_shape_x, img_shape_y))
+
+    if add_noise:
+        img = img + np.random.normal(0, scale=params.noise_std, size=img.shape)
+
+    return torch.as_tensor(img)

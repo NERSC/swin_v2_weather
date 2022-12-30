@@ -253,7 +253,7 @@ class Trainer():
 
     if self.params.optimizer_type == 'FusedAdam':
       self.optimizer = optimizers.FusedAdam(self.model.parameters(), lr = self.params.lr)
-    elif selfparams.optimizer_type == 'FusedLAMB':
+    elif self.params.optimizer_type == 'FusedLAMB':
       self.optimizer = optimizers.FusedLAMB(self.model.parameters(), lr = self.params.lr, weight_decay=self.params.weight_decay, max_grad_norm=5.)
     else:
       self.optimizer = torch.optim.Adam(self.model.parameters(), lr =self.params.lr)
@@ -361,9 +361,6 @@ class Trainer():
     for i, data in enumerate(self.train_data_loader, 0):
       self.iters += 1
     
-      if i > 10:
-        break
-
       # adjust_LR(optimizer, params, iters)
       data_start = time.time()
       inp, tar = map(lambda x: x.to(self.device, dtype = torch.float), data)      

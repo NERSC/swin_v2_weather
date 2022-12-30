@@ -129,7 +129,7 @@ afno_backbone_26var_50km:
   global_means_path: '/pscratch/sd/j/jpathak/34var/new_stats/global_means_50km.npy'
   global_stds_path:  '/pscratch/sd/j/jpathak/34var/new_stats/global_stds_50km.npy'
 
-afno_backbone_25var_50km:
+afno_backbone_25var_50km: &25var_50km
   <<: *backbone
   embed_dim: 768
   nettype: 'afno'
@@ -148,24 +148,51 @@ afno_backbone_25var_50km:
   global_means_path: '/pscratch/sd/j/jpathak/34var/new_stats/global_means_50km.npy'
   global_stds_path:  '/pscratch/sd/j/jpathak/34var/new_stats/global_stds_50km.npy'
 
-afno_backbone_25var_p2_e768_50km:
-  <<: *backbone
+afno_backbone_25var_p2_e384_depth6_50km:
+  <<: *25var_50km
+  embed_dim: 384
+  patch_size: 2
+  depth: 6
+
+afno_backbone_25var_lamb_p2_e384_depth12_lr1em3_50km:
+  <<: *25var_50km
+  optimizer_type: 'FusedLAMB'
+  weight_decay: 1E-6
+  lr: 1E-3
+  embed_dim: 384
+  patch_size: 2
+  depth: 12
+
+afno_backbone_25var_lamb_p2_e768_depth12_lr1em3_50km:
+  <<: *25var_50km
+  optimizer_type: 'FusedLAMB'
+  weight_decay: 1E-6
+  lr: 1E-3
   embed_dim: 768
+  patch_size: 2
+  depth: 12
+
+afno_backbone_25var_p1_e384_depth6_50km:
+  <<: *25var_50km
+  embed_dim: 384
+  patch_size: 1
+  depth: 6
+
+afno_backbone_cmip: &cmip
+  <<: *backbone
+  embed_dim: 384
+  depth: 12
   nettype: 'afno'
   patch_size: 2
   batch_size: 64
   log_to_wandb: !!bool True
-  interp_factor_x: 2
-  interp_factor_y: 2
   exp_dir: '/pscratch/sd/s/shas1693/results/climate'
-  in_channels: [0, 1 ,2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24, 25]
-  out_channels: [0, 1 ,2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24, 25]
-  train_data_path:   '/pscratch/sd/j/jpathak/34var/train'
-  valid_data_path:   '/pscratch/sd/j/jpathak/34var/test'
-  inf_data_path:     '/pscratch/sd/j/jpathak/34var/out_of_sample'
-  time_means_path:   '/pscratch/sd/j/jpathak/34var/new_stats/time_means_50km.npy'
-  global_means_path: '/pscratch/sd/j/jpathak/34var/new_stats/global_means_50km.npy'
-  global_stds_path:  '/pscratch/sd/j/jpathak/34var/new_stats/global_stds_50km.npy'
+  train_data_path:   '/pscratch/sd/p/pharring/cmip_data/ECMWF-IFS-HR/r1i1p1f1/train'
+  valid_data_path:   '/pscratch/sd/p/pharring/cmip_data/ECMWF-IFS-HR/r1i1p1f1/test'
+  inf_data_path:     '/pscratch/sd/p/pharring/cmip_data/ECMWF-IFS-HR/r1i1p1f1/out_of_sample'
+  time_means_path:   '/pscratch/sd/p/pharring/cmip_data/ECMWF-IFS-HR/r1i1p1f1/stats/time_means.npy'
+  global_means_path: '/pscratch/sd/p/pharring/cmip_data/ECMWF-IFS-HR/r1i1p1f1/stats/global_means.npy'
+  global_stds_path:  '/pscratch/sd/p/pharring/cmip_data/ECMWF-IFS-HR/r1i1p1f1/stats/global_stds.npy'
 
 afno_backbone_26var_lamb:
   <<: *26var
