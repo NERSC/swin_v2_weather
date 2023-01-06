@@ -1,5 +1,5 @@
 import torch
-from utils.data_loader import get_data_loader
+from utils.data_loader_check import get_data_loader
 import numpy as np
 import random
 import h5py
@@ -7,7 +7,7 @@ from utils.YParams import YParams
 from networks.afnonet import AFNONet, PrecipNet
 import matplotlib.pyplot as plt
 
-config_name ='afno_backbone_cmip' 
+config_name ='afno_backbone_cmip_p4_e768_depth12_lr1em3' 
 params = YParams('config/AFNO.yaml', config_name)
 
 params.batch_size = 1

@@ -9,11 +9,11 @@
 #SBATCH --cpus-per-task=32
 #SBATCH -J fcn_dev
 #SBATCH --image=nersc/pytorch:ngc-22.02-v0
-#SBATCH -o v9xok1kp_%j.out
+#SBATCH -o 53cy46dl_%j.out
 
 config_file=./config/AFNO.yaml
 config='afno_backbone_25var_50km'
-id="v9xok1kp"
+id="53cy46dl"
 
 export HDF5_USE_FILE_LOCKING=FALSE
 export NCCL_NET_GDR_LEVEL=PHB

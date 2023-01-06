@@ -131,8 +131,20 @@ class GetDataset(Dataset):
     self.files_paths = glob.glob(self.location + "/*.h5")
     self.files_paths.sort()
 
+    if hasattr(self.params, 'leave_out_years'):
+        leave_out_years = [self.location + "/{}.h5".format(y) for y in self.params.leave_out_years]
+        self.files_paths = [f for f in self.files_paths if f not in leave_out_years]
+
     self.n_years = len(self.files_paths)
-    with h5py.File(self.files_paths[0], 'r') as _f:
+    stats_idx = 0
+    # dont use leap year unless they are all leap years
+    while int(self.files_paths[stats_idx].split("/")[-1].split(".")[0]) % 4 == 0:
+        stats_idx += 1
+        if stats_idx >= self.n_years:
+            stats_idx = 0
+            break
+
+    with h5py.File(self.files_paths[stats_idx], 'r') as _f:
         logging.info("Getting file stats from {}".format(self.files_paths[0]))
 
         self.pl_shape = _f['pl'].shape[1]

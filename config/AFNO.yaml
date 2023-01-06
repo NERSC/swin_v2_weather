@@ -163,6 +163,72 @@ afno_backbone_25var_lamb_p2_e384_depth12_lr1em3_50km:
   patch_size: 2
   depth: 12
 
+afno_backbone_25var_lamb_p2_e384_depth12_lr1em3_50km_finetune:
+  <<: *25var_50km
+  optimizer_type: 'FusedLAMB'
+  embed_dim: 384
+  patch_size: 2
+  depth: 12
+  weight_decay: 1E-6
+  lr: 2E-4
+  batch_size: 64
+  log_to_wandb: !!bool True
+  max_epochs: 50
+  pretrained: !!bool True
+  two_step_training: !!bool True
+  prediction_length: 41 #applicable only if prediction_type == 'iterative'
+  pretrained_ckpt_path: '/pscratch/sd/s/shas1693/results/climate/afno_backbone_25var_lamb_p2_e384_depth12_lr1em3_50km/0/training_checkpoints/best_ckpt.tar'
+
+afno_backbone_25var_lamb_p2_e768_depth12_lr1em3_50km_finetune:
+  <<: *25var_50km
+  optimizer_type: 'FusedLAMB'
+  embed_dim: 768
+  patch_size: 2
+  depth: 12
+  weight_decay: 1E-6
+  lr: 2E-4
+  batch_size: 64
+  log_to_wandb: !!bool True
+  max_epochs: 50
+  pretrained: !!bool True
+  two_step_training: !!bool True
+  prediction_length: 41 #applicable only if prediction_type == 'iterative'
+  pretrained_ckpt_path: '/pscratch/sd/s/shas1693/results/climate/afno_backbone_25var_lamb_p2_e768_depth12_lr1em3_50km/0/training_checkpoints/best_ckpt.tar'
+
+afno_backbone_25var_lamb_p4_e768_depth12_lr1em3_50km_finetune:
+  <<: *25var_50km
+  optimizer_type: 'FusedLAMB'
+  embed_dim: 768
+  patch_size: 4
+  depth: 12
+  weight_decay: 1E-6
+  lr: 2E-4
+  batch_size: 64
+  log_to_wandb: !!bool True
+  max_epochs: 50
+  pretrained: !!bool True
+  two_step_training: !!bool True
+  prediction_length: 41 #applicable only if prediction_type == 'iterative'
+  pretrained_ckpt_path: '/pscratch/sd/s/shas1693/results/climate/afno_backbone_25var_lamb_p4_e768_depth12_lr1em3_50km/0/training_checkpoints/best_ckpt.tar'
+
+afno_backbone_25var_lamb_p4_e384_depth12_lr1em3_50km:
+  <<: *25var_50km
+  optimizer_type: 'FusedLAMB'
+  weight_decay: 1E-6
+  lr: 1E-3
+  embed_dim: 384
+  patch_size: 4
+  depth: 12
+
+afno_backbone_25var_lamb_p4_e768_depth12_lr1em3_50km:
+  <<: *25var_50km
+  optimizer_type: 'FusedLAMB'
+  weight_decay: 1E-6
+  lr: 1E-3
+  embed_dim: 768
+  patch_size: 4
+  depth: 12
+
 afno_backbone_25var_lamb_p2_e768_depth12_lr1em3_50km:
   <<: *25var_50km
   optimizer_type: 'FusedLAMB'
@@ -180,12 +246,16 @@ afno_backbone_25var_p1_e384_depth6_50km:
 
 afno_backbone_cmip: &cmip
   <<: *backbone
+  n_channels: 39
   embed_dim: 384
   depth: 12
+  lr: 1E-3
   nettype: 'afno'
   patch_size: 2
   batch_size: 64
   log_to_wandb: !!bool True
+  optimizer_type: 'FusedLAMB'
+  weight_decay: 1E-6
   exp_dir: '/pscratch/sd/s/shas1693/results/climate'
   train_data_path:   '/pscratch/sd/p/pharring/cmip_data/ECMWF-IFS-HR/r1i1p1f1/train'
   valid_data_path:   '/pscratch/sd/p/pharring/cmip_data/ECMWF-IFS-HR/r1i1p1f1/test'
@@ -193,6 +263,76 @@ afno_backbone_cmip: &cmip
   time_means_path:   '/pscratch/sd/p/pharring/cmip_data/ECMWF-IFS-HR/r1i1p1f1/stats/time_means.npy'
   global_means_path: '/pscratch/sd/p/pharring/cmip_data/ECMWF-IFS-HR/r1i1p1f1/stats/global_means.npy'
   global_stds_path:  '/pscratch/sd/p/pharring/cmip_data/ECMWF-IFS-HR/r1i1p1f1/stats/global_stds.npy'
+
+afno_backbone_cmip_p2_e768_depth12_lr1em3:
+  <<: *cmip
+  embed_dim: 768
+  depth: 12
+  nettype: 'afno'
+  patch_size: 2
+  batch_size: 64
+  log_to_wandb: !!bool True
+
+afno_backbone_cmip_p4_e768_depth12_lr1em3:
+  <<: *cmip
+  lr: 1E-3
+  embed_dim: 768
+  depth: 12
+  nettype: 'afno'
+  patch_size: 4
+  batch_size: 64
+  log_to_wandb: !!bool True
+
+afno_backbone_cmip_p4_e768_depth12_lr1em3_finetune:
+  <<: *cmip
+  embed_dim: 768
+  patch_size: 4
+  depth: 12
+  lr: 2E-4
+  batch_size: 64
+  log_to_wandb: !!bool True
+  max_epochs: 50
+  pretrained: !!bool True
+  two_step_training: !!bool True
+  prediction_length: 41 #applicable only if prediction_type == 'iterative'
+  pretrained_ckpt_path: '/pscratch/sd/s/shas1693/results/climate/afno_backbone_cmip_p4_e768_depth12_lr1em3/0/training_checkpoints/best_ckpt.tar'
+
+afno_backbone_era5res_p4_e768_depth12_lr1em3: &era5res
+  <<: *backbone
+  n_channels: 39
+  embed_dim: 768
+  depth: 12
+  nettype: 'afno'
+  lr: 1E-3
+  patch_size: 4
+  batch_size: 64
+  log_to_wandb: !!bool True
+  optimizer_type: 'FusedLAMB'
+  weight_decay: 1E-6
+  exp_dir: '/pscratch/sd/s/shas1693/results/climate'
+  interp_factor_x: 2
+  interp_factor_y: 2
+  leave_out_years: ['2013', '2014']
+  train_data_path:   '/pscratch/sd/p/pharring/cmip_data/ERA5/train'
+  valid_data_path:   '/pscratch/sd/p/pharring/cmip_data/ERA5/test'
+  inf_data_path:     '/pscratch/sd/p/pharring/cmip_data/ERA5/out_of_sample'
+  time_means_path:   '/pscratch/sd/p/pharring/cmip_data/ERA5/stats/time_means_50km.npy'
+  global_means_path: '/pscratch/sd/p/pharring/cmip_data/ERA5/stats/global_means_50km.npy'
+  global_stds_path:  '/pscratch/sd/p/pharring/cmip_data/ERA5/stats/global_stds_50km.npy'
+
+afno_backbone_era5res_p4_e768_depth12_lr1em3_finetune:
+  <<: *era5res
+  patch_size: 4
+  depth: 12
+  embed_dim: 768
+  lr: 2E-4
+  batch_size: 64
+  log_to_wandb: !!bool True
+  max_epochs: 50
+  pretrained: !!bool True
+  two_step_training: !!bool True
+  prediction_length: 41 #applicable only if prediction_type == 'iterative'
+  pretrained_ckpt_path: '/pscratch/sd/s/shas1693/results/climate/afno_backbone_era5res_p4_e768_depth12_lr1em3/0/training_checkpoints/best_ckpt.tar'
 
 afno_backbone_26var_lamb:
   <<: *26var

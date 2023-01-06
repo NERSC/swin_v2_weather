@@ -481,7 +481,10 @@ class Trainer():
         valid_steps += 1.
         # save fields for vis before log norm 
         if (i == sample_idx) and self.log_to_wandb:
-          fields = [gen[0,u10_idx].detach().cpu().numpy(), tar[0,u10_idx].detach().cpu().numpy()]
+          if self.params.two_step_training:
+            fields = [gen_step_one[0,u10_idx].detach().cpu().numpy(), tar[0,u10_idx].detach().cpu().numpy()]
+          else:
+            fields = [gen[0,u10_idx].detach().cpu().numpy(), tar[0,u10_idx].detach().cpu().numpy()]
 
         if self.precip:
           gen = unlog_tp_torch(gen, self.params.precip_eps)

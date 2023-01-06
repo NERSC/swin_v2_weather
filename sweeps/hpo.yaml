@@ -1,4 +1,4 @@
-name: hpo_model
+name: hpo_model_lamb
 entity: climate
 project: 'highresmip'
 program: dummy
@@ -7,6 +7,10 @@ metric:
   name: valid_loss
   goal: minimize
 parameters: 
+  optimizer_type: 
+    value: 'FusedLAMB'
+  weight_decay: 
+    value: 1E-6
   batch_size: 
     value: 64
   lr: 

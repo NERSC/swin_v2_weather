@@ -7,8 +7,14 @@ from skimage.transform import downscale_local_mean
 import matplotlib
 import matplotlib.pyplot as plt
 
-def interpolate_skimage(img, scale):
+def downscale(img, scale):
     new_img = downscale_local_mean(img, (1, 1, scale[0], scale[1]))
+#    new_img = []
+#    for i in range(img.shape[1]):
+#        new_img.append(downscale_local_mean(img[:,i:i+1], (1, 1, scale[0], scale[1])))
+#    new_img = np.concatenate(new_img, axis=1)
+#    print(new_img.shape)
+
     return new_img
 
 def concat(pl, sl):
@@ -25,20 +31,26 @@ def concat(pl, sl):
     return tensor
 
 #years = [1979] 
-years = [1979, 1989, 1999, 2004, 2010]
+years = [1980, 1989, 1999, 2004, 2010]
+#years = [1979, 1989, 1999, 2004, 2010]
 
-orig_size_x = 361
-orig_size_y = 720
+orig_size_x = 720
+orig_size_y = 1440
 
-img_shape_x = orig_size_x
-img_shape_y = orig_size_y #//interp_factor_y
+interp_factor_x = 2
+interp_factor_y = 2
+scale = (interp_factor_x, interp_factor_y)
+
+img_shape_x = orig_size_x // interp_factor_x + 1
+img_shape_y = orig_size_y //interp_factor_y
 n_ch = 39
 
 global_means = np.zeros((1,n_ch,1,1))
 global_stds = np.zeros((1,n_ch,1,1))
 time_means = np.zeros((1,n_ch,img_shape_x,img_shape_y))
 
-base_path = "/pscratch/sd/p/pharring/cmip_data/ECMWF-IFS-HR/r1i1p1f1"
+#base_path = "/pscratch/sd/p/pharring/cmip_data/ECMWF-IFS-HR/r1i1p1f1"
+base_path = "/pscratch/sd/p/pharring/cmip_data/ERA5/"
 
 time_steps = 500
 
@@ -49,6 +61,8 @@ for ii, year in enumerate(years):
         pl = f['pl'][rnd_idx:rnd_idx+time_steps]
         sl = f['sl'][rnd_idx:rnd_idx+time_steps]
         field = concat(pl, sl)
+        if interp_factor_x != 1 or interp_factor_y != 1:
+            field = downscale(field, scale)
         global_means += np.mean(field, keepdims=True, axis = (0,2,3))
         global_stds += np.var(field, keepdims=True, axis = (0,2,3))
         time_means += np.mean(field, keepdims=True, axis = (0))
@@ -58,9 +72,9 @@ global_means = global_means/len(years)
 global_stds = np.sqrt(global_stds/len(years))
 time_means = time_means/len(years)
 
-np.save(base_path + '/stats/' + '/global_means.npy', global_means)
-np.save(base_path + '/stats/' + '/global_stds.npy', global_stds)
-np.save(base_path + '/stats/' + '/time_means.npy', time_means)
+np.save(base_path + '/stats/' + '/global_means_50km.npy', global_means)
+np.save(base_path + '/stats/' + '/global_stds_50km.npy', global_stds)
+np.save(base_path + '/stats/' + '/time_means_50km.npy', time_means)
 
 print("finished")
 
