@@ -243,7 +243,7 @@ def get_fields(pl, sl, inp_or_tar, params, train, add_noise=False):
 
     (n_history, n_pl_vars, n_levels, img_shape_x, img_shape_y) = np.shape(pl)
     n_history -= 1
-    img_shape_x -= 1 # remove last pixel
+#    img_shape_x -= 1 # remove last pixel
     pl = pl[:,:,:,0:img_shape_x]
     sl = sl[:,:,0:img_shape_x]
     n_sl_vars = np.shape(sl)

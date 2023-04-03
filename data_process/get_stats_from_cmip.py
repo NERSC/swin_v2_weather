@@ -34,29 +34,31 @@ def concat(pl, sl):
 years = [1980, 1989, 1999, 2004, 2010]
 #years = [1979, 1989, 1999, 2004, 2010]
 
-orig_size_x = 720
-orig_size_y = 1440
+orig_size_x = 512
+orig_size_y = 1024
 
-interp_factor_x = 2
-interp_factor_y = 2
+interp_factor_x = 1
+interp_factor_y = 1
 scale = (interp_factor_x, interp_factor_y)
 
-img_shape_x = orig_size_x // interp_factor_x + 1
+img_shape_x = orig_size_x // interp_factor_x # + 1
 img_shape_y = orig_size_y //interp_factor_y
-n_ch = 39
+n_ch = 34
 
 global_means = np.zeros((1,n_ch,1,1))
 global_stds = np.zeros((1,n_ch,1,1))
 time_means = np.zeros((1,n_ch,img_shape_x,img_shape_y))
 
 #base_path = "/pscratch/sd/p/pharring/cmip_data/ECMWF-IFS-HR/r1i1p1f1"
-base_path = "/pscratch/sd/p/pharring/cmip_data/ERA5/"
+#base_path = "/pscratch/sd/p/pharring/cmip_data/ERA5/"
+base_path = "/pscratch/sd/p/pharring/cmip_data/EC-Earth3P-HR/highresSST-present/r3i1p1f1"
 
 time_steps = 500
 
 for ii, year in enumerate(years):
     t0 = time.time()
-    with h5py.File(base_path + '/train/'+ str(year) + '.h5', 'r') as f:
+    with h5py.File(base_path + '/'+ str(year) + '.h5', 'r') as f:
+    #with h5py.File(base_path + '/train/'+ str(year) + '.h5', 'r') as f:
         rnd_idx = np.random.randint(0, 1460-time_steps)
         pl = f['pl'][rnd_idx:rnd_idx+time_steps]
         sl = f['sl'][rnd_idx:rnd_idx+time_steps]
@@ -72,9 +74,9 @@ global_means = global_means/len(years)
 global_stds = np.sqrt(global_stds/len(years))
 time_means = time_means/len(years)
 
-np.save(base_path + '/stats/' + '/global_means_50km.npy', global_means)
-np.save(base_path + '/stats/' + '/global_stds_50km.npy', global_stds)
-np.save(base_path + '/stats/' + '/time_means_50km.npy', time_means)
+np.save(base_path + '/stats/' + '/global_means.npy', global_means)
+np.save(base_path + '/stats/' + '/global_stds.npy', global_stds)
+np.save(base_path + '/stats/' + '/time_means.npy', time_means)
 
 print("finished")
 
