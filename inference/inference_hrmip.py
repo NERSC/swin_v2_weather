@@ -77,7 +77,7 @@ from skimage.transform import downscale_local_mean
 
 fld = "z500" # diff flds have diff decor times and hence differnt ics
 if fld == "z500" or fld == "2m_temperature" or fld == "t850":
-    DECORRELATION_TIME = 36 # 9 days (36) for z500, 2 (8 steps) days for u10, v10
+    DECORRELATION_TIME = 33#36 # 9 days (36) for z500, 2 (8 steps) days for u10, v10
 else:
     DECORRELATION_TIME = 8 # 9 days (36) for z500, 2 (8 steps) days for u10, v10
 idxes = {"u10":32, "z500":28, "2m_temperature":31, "v10":33, "t850":None}
@@ -418,7 +418,7 @@ if __name__ == '__main__':
     if vis:
         autoregressive_inference_filetag += "_vis"
     if args.save:
-        autoregressive_inference_filetag += "_save"
+        autoregressive_inference_filetag += "_save_33steps"
 
     # get data and models
     valid_data_full, model = setup(params, args.year)
