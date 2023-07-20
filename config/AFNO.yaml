@@ -78,6 +78,8 @@ full_field: &FULL_FIELD
   project: 'highresmip'
   entity: 'climate'
 
+  img_shape_x_remove_pixel: 1
+
 afno_backbone: &backbone
   <<: *FULL_FIELD
   log_to_wandb: !!bool True

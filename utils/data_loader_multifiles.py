@@ -44,6 +44,7 @@
 #Karthik Kashinath - NVIDIA Corporation 
 #Animashree Anandkumar - California Institute of Technology, NVIDIA Corporation
 
+import os
 import logging
 import glob
 import torch
@@ -56,6 +57,9 @@ import h5py
 import math
 #import cv2
 from utils.img_utils import reshape_fields, reshape_precip, interpolate
+# we need this for the zenith angle feature
+import datetime
+from modulus.utils.sfno.zenith_angle import cos_zenith_angle
 
 
 def get_data_loader(params, files_pattern, distributed, train):
@@ -83,6 +87,7 @@ class GetDataset(Dataset):
     self.train = train
     self.dt = params.dt
     self.n_history = params.n_history
+    self.n_future = params.n_future
     self.in_channels = np.array(params.in_channels)
     self.out_channels = np.array(params.out_channels)
     self.n_in_channels = len(self.in_channels)
@@ -91,8 +96,8 @@ class GetDataset(Dataset):
     self.crop_size_y = params.crop_size_y
     self.roll = params.roll
 
-    self.interp_factor_x = params.interp_factor_x
-    self.interp_factor_y = params.interp_factor_y
+    self.interp_factor_x = params.interp_factor_x if hasattr(params, "interp_factor_x") else 1 
+    self.interp_factor_y = params.interp_factor_y if hasattr(params, "interp_factor_y") else 1
     self.interp_factor = (self.interp_factor_x, self.interp_factor_y)
 
     self._get_files_stats()
@@ -115,22 +120,32 @@ class GetDataset(Dataset):
     if self.orography:
       self.orography_path = params.orography_path
 
+    if self.params.add_zenith:
+        # we need some additional static fields in this case
+        longitude = np.arange(0, 360, 0.25)
+        latitude = np.arange(-90, 90.25, 0.25)
+        latitude = latitude[::-1]
+        self.lon_grid_local, self.lat_grid_local = np.meshgrid(longitude, latitude)
+
+
   def _get_files_stats(self):
     self.files_paths = glob.glob(self.location + "/*.h5")
     self.files_paths.sort()
-    if self.params.add_extra_years:
-        if self.train:
-            valid_location  = self.location.replace("train", "test")
-            self.valid_files_paths = glob.glob(valid_location + "/*.h5")
-            self.valid_files_paths.sort() 
-            self.files_paths.extend(self.valid_files_paths)
+#    if self.params.add_extra_years:
+#        if self.train:
+#            valid_location  = self.location.replace("train", "test")
+#            self.valid_files_paths = glob.glob(valid_location + "/*.h5")
+#            self.valid_files_paths.sort() 
+#            self.files_paths.extend(self.valid_files_paths)
+    # extract the years from filenames
+    self.years = [int(os.path.splitext(os.path.basename(x))[0][-4:]) for x in self.files_paths]
 
     self.n_years = len(self.files_paths)
     with h5py.File(self.files_paths[0], 'r') as _f:
         logging.info("Getting file stats from {}".format(self.files_paths[0]))
         self.n_samples_per_year = _f['fields'].shape[0]
         #original image shape (before padding)
-        self.img_shape_x = _f['fields'].shape[2] -1#just get rid of one of the pixels
+        self.img_shape_x = _f['fields'].shape[2] - - self.params.img_shape_x_remove_pixel#just get rid of one of the pixels
         self.img_shape_y = _f['fields'].shape[3]
 
     self.n_samples_total = self.n_years * self.n_samples_per_year
@@ -155,6 +170,42 @@ class GetDataset(Dataset):
   
   def __len__(self):
     return self.n_samples_total
+
+  def _compute_zenith_angle(self, local_idx, year_idx):
+    # compute hours into the year
+    year = self.years[year_idx]
+    jan_01_epoch = datetime.datetime(year, 1, 1, 0, 0, 0)
+
+    # zenith angle for input
+    cos_zenith_inp = []
+    for idx in range(local_idx - self.dt * self.n_history, local_idx + 1, self.dt):
+        hours_since_jan_01 = idx * 6
+        model_time = jan_01_epoch + datetime.timedelta(hours=hours_since_jan_01)
+        cos_zenith_inp.append(
+            cos_zenith_angle(
+                model_time, self.lon_grid_local, self.lat_grid_local
+            ).astype(np.float32)
+        )
+
+    cos_zenith_inp = np.stack(cos_zenith_inp, axis=0)
+
+    # zenith angle for target:
+    cos_zenith_tar = []
+    for idx in range(
+        local_idx + self.dt, local_idx + self.dt * (self.n_future + 1) + 1, self.dt
+    ):
+        hours_since_jan_01 = idx * 6
+        model_time = jan_01_epoch + datetime.timedelta(hours=hours_since_jan_01)
+        cos_zenith_tar.append(
+            cos_zenith_angle(
+                model_time, self.lon_grid_local, self.lat_grid_local
+            ).astype(np.float32)
+        )
+
+    cos_zenith_tar = np.stack(cos_zenith_tar, axis=0)
+    #cos_zenith_tar = np.expand_dims(np.stack(cos_zenith_tar, axis=0), axis=1)
+
+    return torch.as_tensor(cos_zenith_inp), torch.as_tensor(cos_zenith_tar)
 
 
   def __getitem__(self, global_idx):
@@ -217,5 +268,13 @@ class GetDataset(Dataset):
 
     if self.interp_factor_x != 1 or self.interp_factor_y != 1:
         inp, tar = interpolate(inp, tar, self.interp_factor)
+
+    if hasattr(self.params, "add_zenith"):
+        if self.params.add_zenith:
+            zen_inp, zen_tar = self._compute_zenith_angle(local_idx, year_idx)
+            zen_inp = zen_inp[:,:self.img_shape_x]
+            zen_tar = zen_tar[:,:self.img_shape_x]
+            inp = torch.cat([inp, zen_inp], dim=0)
+            tar = torch.cat([tar, zen_tar], dim=0)
 
     return inp, tar
