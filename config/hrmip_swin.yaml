@@ -1,0 +1,138 @@
+### base config ###
+full_field: &FULL_FIELD
+  loss: 'l2'
+  lr: 1E-3
+  scheduler: 'ReduceLROnPlateau'
+  num_data_workers: 4
+  dt: 1 # how many timesteps ahead the model will predict
+  n_history: 0 #how many previous timesteps to consider
+  prediction_type: 'iterative'
+  prediction_length: 41 #applicable only if prediction_type == 'iterative'
+  n_initial_conditions: 5 #applicable only if prediction_type == 'iterative'
+  ics_type: "default"
+  save_raw_forecasts: !!bool True
+  save_channel: !!bool False
+  masked_acc: !!bool False
+  maskpath: None
+  perturb: !!bool False
+  add_grid: !!bool False
+  N_grid_channels: 0
+  gridtype: 'sinusoidal' #options 'sinusoidal' or 'linear'
+  roll: !!bool False
+  max_epochs: 50
+  batch_size: 64
+
+  #afno hyperparams
+  num_blocks: 8
+  embed_dim: 768
+  nettype: 'afno'
+  patch_size: 8
+  width: 56
+  modes: 32
+  #options default, residual
+  target: 'default' 
+  in_channels: [0,1]
+  out_channels: [0,1] #must be same as in_channels if prediction_type == 'iterative'
+  normalization: 'zscore' #options zscore (minmax not supported) 
+  exp_dir: '/pscratch/sd/j/jpathak/ERA5_expts_gtc/wind'
+  time_means_path:   '/pscratch/sd/j/jpathak/wind/time_means.npy'
+  global_means_path: '/pscratch/sd/j/jpathak/wind/global_means.npy'
+  global_stds_path:  '/pscratch/sd/j/jpathak/wind/global_stds.npy'
+
+  orography: !!bool False
+  orography_path: None
+
+  log_to_screen: !!bool True
+  log_to_wandb: !!bool True
+  save_checkpoint: !!bool True
+
+  enable_nhwc: !!bool False
+  optimizer_type: 'FusedAdam'
+  crop_size_x: None
+  crop_size_y: None
+
+  two_step_training: !!bool False
+  plot_animations: !!bool False
+
+  add_noise: !!bool False
+  noise_std: 0
+
+  drop_path_rate: 0.
+  drop_rate: 0.
+
+  weight_decay: 0
+  residual: !!bool False
+  rmse_loss: !!bool False
+  relative_loss: !!bool True
+
+  decoder_scale: 1
+  add_extra_years: !!bool False
+  depth: 12
+
+  interp_factor_x: 1
+  interp_factor_y: 1
+
+  project: 'highresmip'
+  entity: 'weatherbenching'
+
+  weights_path: "" 
+
+afno_backbone: &backbone
+  <<: *FULL_FIELD
+  log_to_wandb: !!bool True
+  lr: 5E-4
+  batch_size: 64
+  max_epochs: 150
+  scheduler: 'CosineAnnealingLR'
+  orography: !!bool False
+  orography_path: None 
+  exp_dir: '/pscratch/sd/s/shas1693/results/era5_wind'
+
+swin_r2i1p1f1_p4_e768_wr32_lr1em3: &ec3p_r2i1p1f1_swin
+  <<: *backbone
+  n_channels: 34
+  embed_dim: 768
+  depth: 12
+  nettype: 'swin'
+  lr: 1E-3
+  patch_size: 4
+  window_ratio: 32
+  num_heads: 8
+  batch_size: 4
+  img_size: [512, 1024]
+  log_to_wandb: !!bool False
+  optimizer_type: 'Adam'
+  weight_decay: 1E-6
+  exp_dir: '/pscratch/sd/s/shas1693/results/climate'
+  data_path:   '/pscratch/sd/p/pharring/cmip_data/EC-Earth3P-HR/highresSST-present/r2i1p1f1'
+  data_path_inf:   '/pscratch/sd/p/pharring/cmip_data/EC-Earth3P-HR/highresSST-future/r2i1p1f1'
+  train_years_range: [1950, 2010]
+  valid_years_range: [2011, 2012]
+  test_years_range: [2045, 2046]
+  time_means_path:   '/pscratch/sd/p/pharring/cmip_data/EC-Earth3P-HR/highresSST-present/r2i1p1f1/stats/time_means.npy'
+  global_means_path: '/pscratch/sd/p/pharring/cmip_data/EC-Earth3P-HR/highresSST-present/r2i1p1f1/stats/global_means.npy'
+  global_stds_path:  '/pscratch/sd/p/pharring/cmip_data/EC-Earth3P-HR/highresSST-present/r2i1p1f1/stats/global_stds.npy'
+
+swin_r2i1p1f1_p4_e768_wr64_lr1em3:
+  <<: *ec3p_r2i1p1f1_swin
+  window_ratio: 64
+
+swin_r2i1p1f1_p4_e1024_wr64_lr1em3:
+  <<: *ec3p_r2i1p1f1_swin
+  window_ratio: 64
+  embed_dim: 1024
+  
+swin_r2i1p1f1_p2_e384_wr32_lr1em3:
+  <<: *ec3p_r2i1p1f1_swin
+  window_ratio: 32
+  embed_dim: 384
+
+swin_r2i1p1f1_p2_e384_wr64_lr1em3:
+  <<: *ec3p_r2i1p1f1_swin
+  window_ratio: 64
+  embed_dim: 384
+
+swin_r2i1p1f1_p2_e512_wr64_lr1em3:
+  <<: *ec3p_r2i1p1f1_swin
+  window_ratio: 64
+  embed_dim: 512

@@ -45,6 +45,7 @@
 #Animashree Anandkumar - California Institute of Technology, NVIDIA Corporation
 
 import os
+import sys
 import time
 import numpy as np
 import argparse
@@ -64,6 +65,7 @@ logging_utils.config_logger()
 from utils.YParams import YParams
 from utils.data_loader_hrmip import get_data_loader
 from networks.afnonet import AFNONet, PrecipNet
+from networks.swinv2 import swinv2net
 from utils.img_utils import vis
 import wandb
 from utils.weighted_acc_rmse import weighted_acc, weighted_rmse, weighted_rmse_torch, unlog_tp_torch
@@ -235,6 +237,8 @@ class Trainer():
 
     if self.params.nettype == 'afno':
       self.model = AFNONet(self.params).to(self.device) 
+    elif self.params.nettype == 'swin':
+      self.model = swinv2net(self.params).to(self.device) 
     else:
       raise Exception("not implemented")
      
@@ -363,7 +367,9 @@ class Trainer():
     for i, data in enumerate(self.train_data_loader, 0):
       self.iters += 1
 
-
+      if self.iters>=100:
+        print('100 step = %f'%tr_time)
+        sys.exit()
       # adjust_LR(optimizer, params, iters)
       data_start = time.time()
       inp, tar = map(lambda x: x.to(self.device, dtype = torch.float), data)      
