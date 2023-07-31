@@ -367,9 +367,6 @@ class Trainer():
     for i, data in enumerate(self.train_data_loader, 0):
       self.iters += 1
 
-      if self.iters>=100:
-        print('100 step = %f'%tr_time)
-        sys.exit()
       # adjust_LR(optimizer, params, iters)
       data_start = time.time()
       inp, tar = map(lambda x: x.to(self.device, dtype = torch.float), data)      

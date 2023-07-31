@@ -98,9 +98,9 @@ swin_r2i1p1f1_p4_e768_wr32_lr1em3: &ec3p_r2i1p1f1_swin
   patch_size: 4
   window_ratio: 32
   num_heads: 8
-  batch_size: 4
+  batch_size: 64
   img_size: [512, 1024]
-  log_to_wandb: !!bool False
+  log_to_wandb: !!bool True
   optimizer_type: 'Adam'
   weight_decay: 1E-6
   exp_dir: '/pscratch/sd/s/shas1693/results/climate'
@@ -122,17 +122,9 @@ swin_r2i1p1f1_p4_e1024_wr64_lr1em3:
   window_ratio: 64
   embed_dim: 1024
   
-swin_r2i1p1f1_p2_e384_wr32_lr1em3:
+swin_r2i1p1f1_p2_e192_wr64_lr1em3:
   <<: *ec3p_r2i1p1f1_swin
-  window_ratio: 32
-  embed_dim: 384
-
-swin_r2i1p1f1_p2_e384_wr64_lr1em3:
-  <<: *ec3p_r2i1p1f1_swin
+  patch_size: 2
   window_ratio: 64
-  embed_dim: 384
+  embed_dim: 192
 
-swin_r2i1p1f1_p2_e512_wr64_lr1em3:
-  <<: *ec3p_r2i1p1f1_swin
-  window_ratio: 64
-  embed_dim: 512
