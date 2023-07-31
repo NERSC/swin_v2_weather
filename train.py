@@ -133,6 +133,9 @@ class Trainer():
     self.params['N_in_channels'] = len(self.params['in_channels'])
     self.params['N_out_channels'] = len(self.params['out_channels'])
 
+    if params.add_zenith:
+        params.N_in_channels += 1
+
     # init wandb
     if self.sweep_id:
       jid = os.environ['SLURM_JOBID'] # so different sweeps dont resume

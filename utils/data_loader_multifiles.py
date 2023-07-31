@@ -145,7 +145,7 @@ class GetDataset(Dataset):
         logging.info("Getting file stats from {}".format(self.files_paths[0]))
         self.n_samples_per_year = _f['fields'].shape[0]
         #original image shape (before padding)
-        self.img_shape_x = _f['fields'].shape[2] - - self.params.img_shape_x_remove_pixel#just get rid of one of the pixels
+        self.img_shape_x = _f['fields'].shape[2] - self.params.img_shape_x_remove_pixel#just get rid of one of the pixels
         self.img_shape_y = _f['fields'].shape[3]
 
     self.n_samples_total = self.n_years * self.n_samples_per_year
@@ -269,12 +269,11 @@ class GetDataset(Dataset):
     if self.interp_factor_x != 1 or self.interp_factor_y != 1:
         inp, tar = interpolate(inp, tar, self.interp_factor)
 
-    if hasattr(self.params, "add_zenith"):
-        if self.params.add_zenith:
-            zen_inp, zen_tar = self._compute_zenith_angle(local_idx, year_idx)
-            zen_inp = zen_inp[:,:self.img_shape_x]
-            zen_tar = zen_tar[:,:self.img_shape_x]
-            inp = torch.cat([inp, zen_inp], dim=0)
-            tar = torch.cat([tar, zen_tar], dim=0)
+    if self.params.add_zenith:
+        zen_inp, _ = self._compute_zenith_angle(local_idx, year_idx)
+        zen_inp = zen_inp[:,:self.img_shape_x]
+#        zen_tar = zen_tar[:,:self.img_shape_x]
+        inp = torch.cat([inp, zen_inp], dim=0)
+#        tar = torch.cat([tar, zen_tar], dim=0)
 
     return inp, tar
