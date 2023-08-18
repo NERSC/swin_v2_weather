@@ -66,7 +66,6 @@ from utils.YParams import YParams
 from utils.data_loader_multifiles import get_data_loader
 from networks.afnonet import AFNONet, PrecipNet
 from networks.swinv2 import swinv2net
-from networks.swinv2_roll import swinv2net_roll
 from utils.img_utils import vis
 import wandb
 from utils.weighted_acc_rmse import weighted_acc, weighted_rmse, weighted_rmse_torch, unlog_tp_torch
