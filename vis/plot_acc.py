@@ -2,24 +2,36 @@ import numpy as np
 import matplotlib.pyplot as plt
 import h5py
 import os
+import sys
+from ruamel.yaml import YAML
 
+
+# get the 73var channel indices
+with open(os.path.abspath('./config/cos_zenith_sfnonet.yaml')) as _file:
+    idxs_73var = YAML().load(_file)['sfno_73ch_cos_zenith']['channel_names']
+
+fldstr = "z500" # since filenames have z500 in them
 fld = "z500"
-idxes = {"u10":0, "z500":14, "2m_temperature":2, "v10":1, "t850":5, "tp":0}
+idxes = {"u10":0, "z500":14, "2m_temperature":2, "v10":1, "t850":5, "tp":0, "u10m":0, "t2m":2}
+config1 = 'swin_73var_p4_wr80_e768_d24_dpr01_lr1em3_abspos_roll_ft/year2018'
 c = idxes[fld]
-config1 = 'paper/1'
+fldifs = fld if fld != 't2m' else "2m_temperature"
 
 
 # add other configs to plot if needed
 #config2 = 'pretrained_two_step_afno_20ch_bs_64_lr1em4_blk_8_patch_8_cosine_sched/2'
-#config2 = 'afno_backbone_26var_lamb_finetune/0'
-config2 = 'afno_backbone_26var_lamb_embed1536_dpr03_twoyears_dt4/0'
-config3 = 'afno_backbone_26var_lamb_embed1536_dpr03_dt4_newstats/0'
+config2 = 'sfno_73ch/year2018' #'swin_73var_p4_wr80_e768_d24_dpr01_lr1em3_noz_pos_roll/year2018'
+#config2 = 'afno_backbone_26var_lamb_embed1536_dpr03_twoyears_dt4/0'
+config3 = 'swin_73var_p4_wr80_e768_d24_dpr01_lr1em3_abspos_roll/year2018'
 
+#/pscratch/sd/s/shas1693/results/sfno/sfno_73ch/year2018/autoregressive_predictions_z500.h5
+#/pscratch/sd/s/shas1693/results/era5_wind/swin_73var_p4_wr40_lr1em3/year2018/autoregressive_predictions_z500.h5
 basepath = '/pscratch/sd/s/shas1693/results/era5_wind'
+bsfno = '/pscratch/sd/s/shas1693/results/sfno'
 #basepath = '/global/cfs/cdirs/dasrepo/shashank/fcn/'
-filenames = [config1 + "/autoregressive_predictions_"+fld+".h5"]
-filenames += [config2+"/autoregressive_predictions_"+fld+".h5"]
-filenames += [config3+"/autoregressive_predictions_"+fld+".h5"]
+filenames = [config1 + "/autoregressive_predictions_"+fldstr+".h5"]
+filenames += [config2+"/autoregressive_predictions_"+fldstr+".h5"]
+filenames += [config3+"/autoregressive_predictions_"+fldstr+".h5"]
 
 
 if fld == "tp":
@@ -33,7 +45,7 @@ colors = ["r", "g", "m"]
 nms = ["", "", ""] # "_coarse" to use the coarse acc vals from inference.py
 
 #labels = ["FourCastNet p=8", "26var_lamb_e1536_dpr03dt4_extrayrs", "26var_lamb_dt4_lr1em3_twoyears"]
-labels = ["FourCastNet p=8", "26var_lamb_dt4", "26var_lamb_dt4_newstats"]
+labels = ["swin abspos ft", "SFNO 11-step", "swin abspos"]
 
 # weyn;s data
 plot_weyn = False # plot the results from weyn's paper
@@ -54,9 +66,8 @@ if plot_weyn:
 start = 1
 end = 34 if fld != "tp" else 14
 if plot_ifs:
-    ifs = os.path.join(basepath, "ifs_2018_"+fld+"_skip0.h5")
-    if plot_weyn:
-        ifs = os.path.join(basepath, "ifs_2018_"+fld+"_skip0_coarse_dc.h5")
+    fldifs = fldifs.replace('m', '') if fldifs == 'u10m' else fldifs
+    ifs = os.path.join(basepath, "ifs_2018_"+fldifs+"_skip0.h5")
     with h5py.File(ifs, "r") as f:
         ifs_acc = f["acc"][:]
         ifs_rmse = f["rmse"][:]
@@ -86,6 +97,9 @@ if plot_ifs:
 
 for idx, f in enumerate(filenames):
     path_to_h5 = os.path.join(*[basepath, f])
+    if idx == 1:
+        path_to_h5 = os.path.join(*[bsfno, f])
+    c = idxs_73var.index(fld) if idx >= 0 else idxes[fld]
 
     with h5py.File(path_to_h5, "r") as f:
         acc = f["acc"+nms[idx]][:]
@@ -102,8 +116,8 @@ for idx, f in enumerate(filenames):
     hrs = np.arange(6, acc_mean.shape[0]*6+6, 6)
     hrs_2 = np.arange(24, acc_mean.shape[0]*24+24, 24)
     #if idx==2:
-    if idx==1 or idx==2:
-        hrs = hrs_2
+    #if idx==1 or idx==2:
+    #    hrs = hrs_2
 
     ax[0].errorbar(hrs, acc_mean, fmt=lns[idx], label=labels[idx], ms=4, lw=0.7, color=colors[idx])
     ax[0].fill_between(hrs, acc_q1, acc_q3, alpha=0.25, color=colors[idx])
@@ -131,6 +145,7 @@ fig.tight_layout()
 file_nm = os.path.join(*["./pdfs/backbone_fourcastnet_accrmse_"+fld+"_26var_24h_newstats.pdf"])
 #file_nm = os.path.join(*[basepath, "backbone_fourcastnet_accrmse_"+fld+"_26var.pdf"])
 print("saving ", file_nm)
-fig.savefig(file_nm, format="pdf", dpi=1200, bbox_inches="tight")
+plt.show()
+#fig.savefig(file_nm, format="pdf", dpi=1200, bbox_inches="tight")
 #fig.savefig(file_nm.replace(".pdf",".svg"), format="svg", dpi=1200, bbox_inches="tight")
 

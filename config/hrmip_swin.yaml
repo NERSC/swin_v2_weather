@@ -38,6 +38,7 @@ full_field: &FULL_FIELD
   time_means_path:   '/pscratch/sd/j/jpathak/wind/time_means.npy'
   global_means_path: '/pscratch/sd/j/jpathak/wind/global_means.npy'
   global_stds_path:  '/pscratch/sd/j/jpathak/wind/global_stds.npy'
+  add_zenith: False
 
   orography: !!bool False
   orography_path: None
@@ -76,6 +77,9 @@ full_field: &FULL_FIELD
   entity: 'weatherbenching'
 
   weights_path: "" 
+  activation_ckpt: False
+  full_pos_embed: False
+  rel_pos: True
 
 afno_backbone: &backbone
   <<: *FULL_FIELD
@@ -113,7 +117,7 @@ swin_r2i1p1f1_p4_e768_wr32_lr1em3: &ec3p_r2i1p1f1_swin
   global_means_path: '/pscratch/sd/p/pharring/cmip_data/EC-Earth3P-HR/highresSST-present/r2i1p1f1/stats/global_means.npy'
   global_stds_path:  '/pscratch/sd/p/pharring/cmip_data/EC-Earth3P-HR/highresSST-present/r2i1p1f1/stats/global_stds.npy'
 
-swin_r2i1p1f1_p4_e768_wr64_lr1em3:
+swin_r2i1p1f1_p4_e1024_wr32_lr1em3:
   <<: *ec3p_r2i1p1f1_swin
   window_ratio: 64
 
@@ -121,6 +125,11 @@ swin_r2i1p1f1_p4_e1024_wr64_lr1em3:
   <<: *ec3p_r2i1p1f1_swin
   window_ratio: 64
   embed_dim: 1024
+
+swin_r2i1p1f1_p4_e1536_wr32_lr1em3:
+  <<: *ec3p_r2i1p1f1_swin
+  window_ratio: 32
+  embed_dim: 1536
   
 swin_r2i1p1f1_p2_e192_wr64_lr1em3:
   <<: *ec3p_r2i1p1f1_swin
@@ -128,3 +137,8 @@ swin_r2i1p1f1_p2_e192_wr64_lr1em3:
   window_ratio: 64
   embed_dim: 192
 
+swin_r2i1p1f1_p2_e512_wr64_lr1em3:
+  <<: *ec3p_r2i1p1f1_swin
+  patch_size: 2
+  window_ratio: 64
+  embed_dim: 512

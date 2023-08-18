@@ -45,6 +45,7 @@
 #Animashree Anandkumar - California Institute of Technology, NVIDIA Corporation
 
 import os
+import sys
 import time
 import numpy as np
 import argparse
@@ -64,6 +65,8 @@ logging_utils.config_logger()
 from utils.YParams import YParams
 from utils.data_loader_multifiles import get_data_loader
 from networks.afnonet import AFNONet, PrecipNet
+from networks.swinv2 import swinv2net
+from networks.swinv2_roll import swinv2net_roll
 from utils.img_utils import vis
 import wandb
 from utils.weighted_acc_rmse import weighted_acc, weighted_rmse, weighted_rmse_torch, unlog_tp_torch
@@ -76,6 +79,11 @@ DECORRELATION_TIME = 36 # 9 days
 import json
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap as ruamelDict
+from typing import Callable, Any
+
+def ckpt_identity(layer: Callable, *args: Any, **kwargs: Any) -> Any:
+    """Identity function for when activation checkpointing is not needed"""
+    return layer(*args)
 
 def set_seed(params, world_size):
     seed = params.seed
@@ -126,6 +134,7 @@ class Trainer():
 
     self.config = args.config 
     self.run_num = args.run_num
+    self.ckpt_fn = torch.utils.checkpoint.checkpoint if params.activation_ckpt else ckpt_identity
 
   def build_and_launch(self):
     self.params['in_channels'] = np.array(self.params['in_channels'])
@@ -133,7 +142,7 @@ class Trainer():
     self.params['N_in_channels'] = len(self.params['in_channels'])
     self.params['N_out_channels'] = len(self.params['out_channels'])
 
-    if params.add_zenith:
+    if self.params.add_zenith:
         params.N_in_channels += 1
 
     # init wandb
@@ -240,6 +249,8 @@ class Trainer():
 
     if self.params.nettype == 'afno':
       self.model = AFNONet(self.params).to(self.device) 
+    elif self.params.nettype == 'swin':
+      self.model = swinv2net(self.params).to(self.device)
     else:
       raise Exception("not implemented")
      
@@ -258,6 +269,8 @@ class Trainer():
       self.optimizer = optimizers.FusedAdam(self.model.parameters(), lr = self.params.lr)
     elif self.params.optimizer_type == 'FusedLAMB':
       self.optimizer = optimizers.FusedLAMB(self.model.parameters(), lr = self.params.lr, weight_decay=self.params.weight_decay, max_grad_norm=5.)
+    elif self.params.optimizer_type == 'AdamW':
+      self.optimizer = torch.optim.AdamW(self.model.parameters(), lr =self.params.lr, weight_decay=self.params.weight_decay)
     else:
       self.optimizer = torch.optim.Adam(self.model.parameters(), lr =self.params.lr)
 
@@ -385,12 +398,28 @@ class Trainer():
       self.model.zero_grad()
       if self.params.two_step_training:
           with amp.autocast(self.params.enable_amp):
-            gen_step_one = self.model(inp).to(self.device, dtype = torch.float)
+            gen_step_one = self.ckpt_fn(self.model,
+                                        inp,
+                                        use_reentrant=False,
+                                        ).to(self.device, dtype = torch.float)
             loss_step_one = self.loss_obj(gen_step_one, tar[:,0:self.params.N_out_channels])
             if self.params.orography:
-                gen_step_two = self.model(torch.cat( (gen_step_one, orog), axis = 1)  ).to(self.device, dtype = torch.float)
+                gen_step_two = self.ckpt_fn(self.model,
+                                            torch.cat( (gen_step_one, orog), axis = 1),
+                                            use_reentrant=False,
+                                            ).to(self.device, dtype = torch.float)
+            elif self.params.add_zenith:
+                zenith = tar[:,2*self.params.N_out_channels:2*self.params.N_out_channels+2]
+                gen_step_one_zenith = torch.cat([gen_step_one, zenith], dim= 1)
+                gen_step_two = self.ckpt_fn(self.model,
+                                            gen_step_one_zenith, 
+                                            use_reentrant=False,
+                                            ).to(self.device, dtype = torch.float)
             else:
-                gen_step_two = self.model(gen_step_one).to(self.device, dtype = torch.float)
+                gen_step_two = self.ckpt_fn(self.model,
+                                            gen_step_one,
+                                            use_reentrant=False,
+                                            ).to(self.device, dtype = torch.float)
             loss_step_two = self.loss_obj(gen_step_two, tar[:,self.params.N_out_channels:2*self.params.N_out_channels])
             loss = loss_step_one + loss_step_two
       else:
@@ -464,8 +493,12 @@ class Trainer():
 
             if self.params.orography:
                 gen_step_two = self.model(torch.cat( (gen_step_one, orog), axis = 1)  ).to(self.device, dtype = torch.float)
+            elif self.params.add_zenith:
+                zenith = tar[:,2*self.params.N_out_channels:2*self.params.N_out_channels+2]
+                gen_step_one_zenith = torch.cat([gen_step_one, zenith], dim= 1)
+                gen_step_two = self.model(gen_step_one_zenith).to(self.device, dtype = torch.float)
             else:
-                gen_step_two = self.model(gen_step_one).to(self.device, dtype = torch.float)
+                gen_step_two = self.model(gen_step_one)
 
             loss_step_two = self.loss_obj(gen_step_two, tar[:,self.params.N_out_channels:2*self.params.N_out_channels])
             valid_loss += loss_step_one + loss_step_two

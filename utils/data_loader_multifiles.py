@@ -272,8 +272,11 @@ class GetDataset(Dataset):
     if self.params.add_zenith:
         zen_inp, _ = self._compute_zenith_angle(local_idx, year_idx)
         zen_inp = zen_inp[:,:self.img_shape_x]
-#        zen_tar = zen_tar[:,:self.img_shape_x]
+        if self.two_step_training:
+             # zenith for the intermediate step is just appended to the target for now
+             # gets pulled off in training loop
+             zen_tar = self._compute_zenith_angle(local_idx + step, year_idx)
+             tar = torch.cat([tar, zen_inp], dim=0)
         inp = torch.cat([inp, zen_inp], dim=0)
-#        tar = torch.cat([tar, zen_tar], dim=0)
 
     return inp, tar

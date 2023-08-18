@@ -1,0 +1,364 @@
+### base config ###
+full_field: &FULL_FIELD
+  loss: 'l2'
+  lr: 1E-3
+  scheduler: 'ReduceLROnPlateau'
+  num_data_workers: 4
+  dt: 1 # how many timesteps ahead the model will predict
+  n_history: 0 #how many previous timesteps to consider
+  n_future: 0
+  prediction_type: 'iterative'
+  prediction_length: 41 #applicable only if prediction_type == 'iterative'
+  n_initial_conditions: 5 #applicable only if prediction_type == 'iterative'
+  ics_type: "default"
+  save_raw_forecasts: !!bool True
+  save_channel: !!bool False
+  masked_acc: !!bool False
+  maskpath: None
+  perturb: !!bool False
+  add_grid: !!bool False
+  N_grid_channels: 0
+  gridtype: 'sinusoidal' #options 'sinusoidal' or 'linear'
+  roll: !!bool False
+  max_epochs: 50
+  batch_size: 64
+
+  #afno hyperparams
+  num_blocks: 8
+  embed_dim: 768
+  nettype: 'afno'
+  patch_size: 8
+  width: 56
+  modes: 32
+  #options default, residual
+  target: 'default' 
+  in_channels: [0,1]
+  out_channels: [0,1] #must be same as in_channels if prediction_type == 'iterative'
+  normalization: 'zscore' #options zscore (minmax not supported) 
+  train_data_path: '/pscratch/sd/j/jpathak/wind/train'
+  valid_data_path: '/pscratch/sd/j/jpathak/wind/test'
+  inf_data_path: '/pscratch/sd/j/jpathak/wind/out_of_sample' # test set path for inference
+  exp_dir: '/pscratch/sd/j/jpathak/ERA5_expts_gtc/wind'
+  time_means_path:   '/pscratch/sd/j/jpathak/wind/time_means.npy'
+  global_means_path: '/pscratch/sd/j/jpathak/wind/global_means.npy'
+  global_stds_path:  '/pscratch/sd/j/jpathak/wind/global_stds.npy'
+
+  orography: !!bool False
+  orography_path: None
+
+  log_to_screen: !!bool True
+  log_to_wandb: !!bool True
+  save_checkpoint: !!bool True
+
+  enable_nhwc: !!bool False
+  optimizer_type: 'FusedAdam'
+  crop_size_x: None
+  crop_size_y: None
+
+  two_step_training: !!bool False
+  plot_animations: !!bool False
+
+  add_noise: !!bool False
+  noise_std: 0
+
+  drop_path_rate: 0.
+  drop_rate: 0.
+
+  weight_decay: 0
+  residual: !!bool False
+  rmse_loss: !!bool False
+  relative_loss: !!bool True
+
+  decoder_scale: 1
+  add_extra_years: !!bool False
+  depth: 12
+
+  interp_factor_x: 1
+  interp_factor_y: 1
+
+  project: 'ERA5_precip'
+  entity: 'flowgan'
+
+  img_shape_x_remove_pixel: 1
+  add_zenith: !!bool False
+  activation_ckpt: False
+  full_pos_embed: False
+  rel_pos: True
+
+afno_backbone: &backbone
+  <<: *FULL_FIELD
+  log_to_wandb: !!bool True
+  lr: 5E-4
+  batch_size: 64
+  max_epochs: 150
+  scheduler: 'CosineAnnealingLR'
+  in_channels: [0, 1 ,2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+  out_channels: [0, 1 ,2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+  orography: !!bool False
+  orography_path: None 
+  exp_dir: '/pscratch/sd/s/shas1693/results/era5_wind'
+  train_data_path: '/pscratch/sd/s/shas1693/data/era5/train'
+  valid_data_path: '/pscratch/sd/s/shas1693/data/era5/test'
+  inf_data_path:   '/pscratch/sd/s/shas1693/data/era5/out_of_sample'
+  time_means_path:   '/pscratch/sd/s/shas1693/data/era5/time_means.npy'
+  global_means_path: '/pscratch/sd/s/shas1693/data/era5/global_means.npy'
+  global_stds_path:  '/pscratch/sd/s/shas1693/data/era5/global_stds.npy'
+
+afno_backbone_26var: &26var
+  <<: *backbone
+  batch_size: 4
+  log_to_wandb: !!bool False
+  in_channels: [0, 1 ,2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+  out_channels: [0, 1 ,2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+  train_data_path:   '/pscratch/sd/j/jpathak/34var/train'
+  valid_data_path:   '/pscratch/sd/j/jpathak/34var/test'
+  inf_data_path:     '/pscratch/sd/j/jpathak/34var/out_of_sample'
+  time_means_path:   '/pscratch/sd/j/jpathak/34var/stats/time_means.npy'
+  global_means_path: '/pscratch/sd/j/jpathak/34var/stats/global_means.npy'
+  global_stds_path:  '/pscratch/sd/j/jpathak/34var/stats/global_stds.npy'
+
+afno_backbone_73var: &73var
+  <<: *backbone
+  batch_size: 64
+  log_to_wandb: !!bool True
+  in_channels: [0, 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+  out_channels: [0, 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+  train_data_path:   '/pscratch/sd/p/pharring/73var-6hourly/staging/train'
+  valid_data_path:   '/pscratch/sd/p/pharring/73var-6hourly/staging/test'
+  inf_data_path:     '/pscratch/sd/p/pharring/73var-6hourly/staging/out_of_sample'
+  time_means_path:   '/pscratch/sd/p/pharring/73var-6hourly/staging/stats/time_means.npy'
+  global_means_path: '/pscratch/sd/p/pharring/73var-6hourly/staging/stats/global_means.npy'
+  global_stds_path:  '/pscratch/sd/p/pharring/73var-6hourly/staging/stats/global_stds.npy'
+  add_zenith: !!bool True
+  channel_names:
+    - u10m
+    - v10m
+    - u100m
+    - v100m
+    - t2m
+    - sp
+    - msl
+    - tcwv
+    - u50
+    - u100
+    - u150
+    - u200
+    - u250
+    - u300
+    - u400
+    - u500
+    - u600
+    - u700
+    - u850
+    - u925
+    - u1000
+    - v50
+    - v100
+    - v150
+    - v200
+    - v250
+    - v300
+    - v400
+    - v500
+    - v600
+    - v700
+    - v850
+    - v925
+    - v1000
+    - z50
+    - z100
+    - z150
+    - z200
+    - z250
+    - z300
+    - z400
+    - z500
+    - z600
+    - z700
+    - z850
+    - z925
+    - z1000
+    - t50
+    - t100
+    - t150
+    - t200
+    - t250
+    - t300
+    - t400
+    - t500
+    - t600
+    - t700
+    - t850
+    - t925
+    - t1000
+    - r50
+    - r100
+    - r150
+    - r200
+    - r250
+    - r300
+    - r400
+    - r500
+    - r600
+    - r700
+    - r850
+    - r925
+    - r1000
+
+swin_73var_p4_wr48_lr1em3: &73var_swin
+  <<: *73var
+  embed_dim: 768
+  depth: 12
+  nettype: 'swin'
+  lr: 1E-3
+  patch_size: 4
+  window_ratio: 48
+  num_heads: 8
+  batch_size: 64
+  img_size: [720, 1440]
+  log_to_wandb: !!bool True
+  optimizer_type: 'Adam' 
+  
+swin_73var_p4_wr40_lr1em3:
+  <<: *73var_swin
+  window_ratio: 40
+
+swin_73var_p4_wr40_lr1em3_ft:
+  <<: *73var_swin
+  window_ratio: 40
+  lr: 1E-4
+  batch_size: 64
+  max_epochs: 50
+  pretrained: !!bool True
+  two_step_training: !!bool True
+  pretrained_ckpt_path: '/pscratch/sd/s/shas1693/results/era5_wind/swin_73var_p4_wr40_lr1em3/0/training_checkpoints/best_ckpt.tar'
+  activation_ckpt: True
+
+swin_73var_p4_wr80_lr1em3:
+  <<: *73var_swin
+  window_ratio: 80
+
+swin_73var_p4_wr36_lr1em3:
+  <<: *73var_swin
+  window_ratio: 36
+
+swin_73var_p4_wr80_e1536_dpr01_lr1em3:
+  <<: *73var_swin
+  window_ratio: 80
+  embed_dim: 1536
+  drop_path_rate: 0.1
+
+swin_73var_p4_wr80_e1536_dpr03_lr1em3:
+  <<: *73var_swin
+  window_ratio: 80
+  embed_dim: 1536
+  drop_path_rate: 0.3
+
+swin_73var_p4_wr80_e768_d24_dpr01_lr1em3:
+  <<: *73var_swin
+  window_ratio: 80
+  depth: 24
+  drop_path_rate: 0.1
+
+swin_73var_p4_wr80_e768_d24_dpr01_lr1em3_noz_pos:
+  <<: *73var_swin
+  window_ratio: 80
+  depth: 24
+  drop_path_rate: 0.1
+  add_zenith: False
+  full_pos_embed: True
+
+swin_73var_p4_wr80_e768_d24_dpr01_lr1em3_noz_pos_ft:
+  <<: *73var_swin
+  window_ratio: 80
+  depth: 24
+  drop_path_rate: 0.1
+  add_zenith: False
+  full_pos_embed: True
+  lr: 1E-4
+  batch_size: 64
+  max_epochs: 50
+  pretrained: !!bool True
+  two_step_training: !!bool True
+  pretrained_ckpt_path: '/pscratch/sd/s/shas1693/results/era5_wind/swin_73var_p4_wr80_e768_d24_dpr01_lr1em3_noz_pos/0/training_checkpoints/best_ckpt.tar'
+  activation_ckpt: True
+
+swin_73var_p4_wr80_e768_d24_dpr01_lr1em3_noz_pos_roll:
+  <<: *73var_swin
+  window_ratio: 80
+  depth: 24
+  drop_path_rate: 0.1
+  add_zenith: False
+  full_pos_embed: True
+  nettype: 'swin'
+
+swin_73var_p4_wr80_e768_d24_dpr01_lr1em3_abspos_roll:
+  <<: *73var_swin
+  window_ratio: 80
+  depth: 24
+  drop_path_rate: 0.1
+  full_pos_embed: True
+  rel_pos: False
+  nettype: 'swin'
+
+swin_73var_p4_wr80_e768_d24_dpr01_lr1em3_roll:
+  <<: *73var_swin
+  window_ratio: 80
+  depth: 24
+  drop_path_rate: 0.1
+  nettype: 'swin'
+
+swin_73var_p4_wr80_e768_d24_dpr01_lr1em3_noz_pos_roll_ft:
+  <<: *73var_swin
+  window_ratio: 80
+  depth: 24
+  drop_path_rate: 0.1
+  add_zenith: False
+  full_pos_embed: True
+  nettype: 'swin'
+  lr: 1E-4
+  max_epochs: 50
+  pretrained: !!bool True
+  two_step_training: !!bool True
+  pretrained_ckpt_path: '/pscratch/sd/s/shas1693/results/era5_wind/swin_73var_p4_wr80_e768_d24_dpr01_lr1em3_noz_pos_roll/0/training_checkpoints/best_ckpt.tar'
+  activation_ckpt: True
+
+swin_73var_p4_wr80_e768_d24_dpr01_lr1em3_abspos_roll_ft:
+  <<: *73var_swin
+  window_ratio: 80
+  depth: 24
+  drop_path_rate: 0.1
+  full_pos_embed: True
+  rel_pos: False
+  nettype: 'swin'
+  lr: 1E-4
+  max_epochs: 50
+  pretrained: !!bool True
+  two_step_training: !!bool True
+  pretrained_ckpt_path: '/pscratch/sd/s/shas1693/results/era5_wind/swin_73var_p4_wr80_e768_d24_dpr01_lr1em3_abspos_roll/0/training_checkpoints/best_ckpt.tar'
+  activation_ckpt: True
+
+swin_73var_p4_wr80_e768_d24_dpr01_lr1em3_roll_ft:
+  <<: *73var_swin
+  window_ratio: 80
+  depth: 24
+  drop_path_rate: 0.1
+  nettype: 'swin'
+  lr: 1E-4
+  max_epochs: 50
+  pretrained: !!bool True
+  two_step_training: !!bool True
+  pretrained_ckpt_path: '/pscratch/sd/s/shas1693/results/era5_wind/swin_73var_p4_wr80_e768_d24_dpr01_lr1em3_roll/0/training_checkpoints/best_ckpt.tar'
+  activation_ckpt: True
+
+swin_73var_p4_wr40_adamw_lr1em3:
+  <<: *73var_swin
+  window_ratio: 40
+  optimizer_type: 'AdamW'
+  weight_decay: 1E-1
+
+swin_73var_p4_wr40_adamw_lr1em4:
+  <<: *73var_swin
+  window_ratio: 40
+  optimizer_type: 'AdamW'
+  weight_decay: 1E-1
