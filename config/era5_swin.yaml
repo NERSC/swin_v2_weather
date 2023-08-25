@@ -92,17 +92,17 @@ backbone: &backbone
   batch_size: 64
   max_epochs: 150
   scheduler: 'CosineAnnealingLR'
-  in_channels: [0, 1 ,2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
-  out_channels: [0, 1 ,2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+  in_channels: [0, 1 ,2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+  out_channels: [0, 1 ,2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
   orography: !!bool False
   orography_path: None 
   exp_dir: '/pscratch/sd/s/shas1693/results/weather/era5_swin'
-  train_data_path: '/pscratch/sd/s/shas1693/data/era5/train'
-  valid_data_path: '/pscratch/sd/s/shas1693/data/era5/test'
-  inf_data_path:   '/pscratch/sd/s/shas1693/data/era5/out_of_sample'
-  time_means_path:   '/pscratch/sd/s/shas1693/data/era5/time_means.npy'
-  global_means_path: '/pscratch/sd/s/shas1693/data/era5/global_means.npy'
-  global_stds_path:  '/pscratch/sd/s/shas1693/data/era5/global_stds.npy'
+  train_data_path: '/pscratch/sd/j/jpathak/34var/train'
+  valid_data_path: '/pscratch/sd/j/jpathak/34var/test'
+  inf_data_path:   '/pscratch/sd/j/jpathak/34var/out_of_sample'
+  time_means_path:   '/pscratch/sd/j/jpathak/34var/new_stats/time_means.npy'
+  global_means_path: '/pscratch/sd/j/jpathak/34var/new_stats/global_means.npy'
+  global_stds_path:  '/pscratch/sd/j/jpathak/34var/new_stats/global_means.npy'
 
 backbone_73var: &73var
   <<: *backbone
@@ -192,6 +192,23 @@ backbone_73var: &73var
     - r925
     - r1000
 
+swin_26var:
+  <<: *backbone
+  embed_dim: 768
+  depth: 24
+  nettype: 'swin'
+  lr: 1E-3
+  batch_size: 64
+  window_ratio: 80
+  num_heads: 8
+  img_size: [720, 1440]
+  log_to_wandb: !!bool True
+  optimizer_type: 'Adam'
+  drop_path_rate: 0.1
+  add_zenith: False
+  full_pos_embed: True
+  mlp_ratio: 4
+
 swin_73var: &73var_swin
   <<: *73var
   embed_dim: 768
@@ -208,6 +225,7 @@ swin_73var: &73var_swin
   drop_path_rate: 0.1
   add_zenith: False
   full_pos_embed: True
+  mlp_ratio: 4
 
 swin_73var_ft:
   <<: *73var_swin
@@ -217,4 +235,16 @@ swin_73var_ft:
   two_step_training: !!bool True
   pretrained_ckpt_path: '/pscratch/sd/s/shas1693/results/era5_wind/swin_73var_p4_wr80_e768_d24_dpr01_lr1em3_noz_pos_roll/0/training_checkpoints/best_ckpt.tar'
   activation_ckpt: True
+
+swin_73var_zen_abspos_ft:
+  <<: *73var_swin
+  lr: 1E-4
+  max_epochs: 50
+  pretrained: !!bool True
+  two_step_training: !!bool True
+  pretrained_ckpt_path: '/pscratch/sd/s/shas1693/results/era5_wind/swin_73var_p4_wr80_e768_d24_dpr01_lr1em3_abspos_roll/0/training_checkpoints/best_ckpt.tar'
+  activation_ckpt: True
+  add_zenith: True
+  full_pos_embed: True
+  rel_pos: False
 

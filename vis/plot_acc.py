@@ -11,9 +11,9 @@ with open(os.path.abspath('./config/cos_zenith_sfnonet.yaml')) as _file:
     idxs_73var = YAML().load(_file)['sfno_73ch_cos_zenith']['channel_names']
 
 fldstr = "z500" # since filenames have z500 in them
-fld = "z500"
+fld = "u10m"
 idxes = {"u10":0, "z500":14, "2m_temperature":2, "v10":1, "t850":5, "tp":0, "u10m":0, "t2m":2}
-config1 = 'swin_73var_p4_wr80_e768_d24_dpr01_lr1em3_abspos_roll_ft/year2018'
+config1 = 'swin_73var_ft/year2018'
 c = idxes[fld]
 fldifs = fld if fld != 't2m' else "2m_temperature"
 
@@ -22,11 +22,11 @@ fldifs = fld if fld != 't2m' else "2m_temperature"
 #config2 = 'pretrained_two_step_afno_20ch_bs_64_lr1em4_blk_8_patch_8_cosine_sched/2'
 config2 = 'sfno_73ch/year2018' #'swin_73var_p4_wr80_e768_d24_dpr01_lr1em3_noz_pos_roll/year2018'
 #config2 = 'afno_backbone_26var_lamb_embed1536_dpr03_twoyears_dt4/0'
-config3 = 'swin_73var_p4_wr80_e768_d24_dpr01_lr1em3_abspos_roll/year2018'
+config3 = 'swin_73var_zen_abspos_ft/year2018'
 
 #/pscratch/sd/s/shas1693/results/sfno/sfno_73ch/year2018/autoregressive_predictions_z500.h5
 #/pscratch/sd/s/shas1693/results/era5_wind/swin_73var_p4_wr40_lr1em3/year2018/autoregressive_predictions_z500.h5
-basepath = '/pscratch/sd/s/shas1693/results/era5_wind'
+basepath = '/pscratch/sd/s/shas1693/results/weather/era5_swin'
 bsfno = '/pscratch/sd/s/shas1693/results/sfno'
 #basepath = '/global/cfs/cdirs/dasrepo/shashank/fcn/'
 filenames = [config1 + "/autoregressive_predictions_"+fldstr+".h5"]
@@ -45,7 +45,7 @@ colors = ["r", "g", "m"]
 nms = ["", "", ""] # "_coarse" to use the coarse acc vals from inference.py
 
 #labels = ["FourCastNet p=8", "26var_lamb_e1536_dpr03dt4_extrayrs", "26var_lamb_dt4_lr1em3_twoyears"]
-labels = ["swin abspos ft", "SFNO 11-step", "swin abspos"]
+labels = ["swin", "SFNO 11-step", "swin abspos coszen"]
 
 # weyn;s data
 plot_weyn = False # plot the results from weyn's paper
@@ -67,7 +67,7 @@ start = 1
 end = 34 if fld != "tp" else 14
 if plot_ifs:
     fldifs = fldifs.replace('m', '') if fldifs == 'u10m' else fldifs
-    ifs = os.path.join(basepath, "ifs_2018_"+fldifs+"_skip0.h5")
+    ifs = os.path.join('/pscratch/sd/s/shas1693/results/era5_wind/', "ifs_2018_"+fldifs+"_skip0.h5")
     with h5py.File(ifs, "r") as f:
         ifs_acc = f["acc"][:]
         ifs_rmse = f["rmse"][:]

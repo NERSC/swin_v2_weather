@@ -271,7 +271,7 @@ class Trainer():
     elif self.params.optimizer_type == 'AdamW':
       self.optimizer = torch.optim.AdamW(self.model.parameters(), lr =self.params.lr, weight_decay=self.params.weight_decay)
     else:
-      self.optimizer = torch.optim.Adam(self.model.parameters(), lr =self.params.lr)
+      self.optimizer = torch.optim.Adam(self.model.parameters(), lr =self.params.lr, weight_decay=self.params.weight_decay)
 
     if self.params.enable_amp == True:
       self.gscaler = amp.GradScaler()
@@ -493,7 +493,7 @@ class Trainer():
             if self.params.orography:
                 gen_step_two = self.model(torch.cat( (gen_step_one, orog), axis = 1)  ).to(self.device, dtype = torch.float)
             elif self.params.add_zenith:
-                zenith = tar[:,2*self.params.N_out_channels:2*self.params.N_out_channels+2]
+                zenith = tar[:,2*self.params.N_out_channels:2*self.params.N_out_channels+1]
                 gen_step_one_zenith = torch.cat([gen_step_one, zenith], dim= 1)
                 gen_step_two = self.model(gen_step_one_zenith).to(self.device, dtype = torch.float)
             else:

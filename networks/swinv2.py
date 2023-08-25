@@ -36,6 +36,7 @@ def swinv2net(params):
                   drop_path_rate=params.drop_path_rate,
                   full_pos_embed=params.full_pos_embed,
                   rel_pos=params.rel_pos,
+                  mlp_ratio=params.mlp_ratio,
     )
                   
 

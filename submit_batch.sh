@@ -13,7 +13,7 @@
 
 config_file=./config/era5_swin.yaml
 config=$1
-run_num='1'
+run_num='0'
 
 export HDF5_USE_FILE_LOCKING=FALSE
 export NCCL_NET_GDR_LEVEL=PHB
