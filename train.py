@@ -199,7 +199,7 @@ class Trainer():
       yaml = YAML()
       for key, value in self.params.params.items():
         hparams[str(key)] = value
-        with open(os.path.join(expDir, 'hyperparams.yaml'), 'w') as hpfile:
+        with open(os.path.join(self.params['experiment_dir'], 'hyperparams.yaml'), 'w') as hpfile:
             yaml.dump(hparams, hpfile)
 
     logging.info('rank %d, begin data loader init'%self.world_rank)

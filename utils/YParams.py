@@ -37,10 +37,6 @@ class YParams():
     self.params[key] = val
     self.__setattr__(key, val)
 
-  def __custom_setattr__(self, key, val):
-    self.params[key] = val
-    super().__setattr__(key, val)
-
   def __contains__(self, key):
     return (key in self.params)
 
