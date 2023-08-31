@@ -75,6 +75,8 @@ import glob
 import datetime
 from skimage.transform import downscale_local_mean
 from modulus.utils.sfno.zenith_angle import cos_zenith_angle
+from ruamel.yaml import YAML
+from ruamel.yaml.comments import CommentedMap as ruamelDict
 
 
 
@@ -131,7 +133,7 @@ def load_model(model, params, checkpoint_file):
 def downsample(x, scale=0.125):
     return torch.nn.functional.interpolate(x, scale_factor=scale, mode='bilinear')
 
-def setup(params):
+def setup(params, save_jit, expDir):
     device = torch.cuda.current_device() if torch.cuda.is_available() else 'cpu'
     #get data loader
     valid_data_loader, valid_dataset = get_data_loader(params, params.inf_data_path, dist.is_initialized(), train=False)
@@ -152,6 +154,14 @@ def setup(params):
     else:
       params['N_in_channels'] = n_in_channels
     params['N_out_channels'] = n_out_channels
+
+    # Save out config
+    hparams = ruamelDict()
+    yaml = YAML()
+    for key, value in params.params.items():
+        hparams[str(key)] = value
+        with open(os.path.join(expDir, 'hyperparams.yaml'), 'w') as hpfile:
+            yaml.dump(hparams, hpfile)
     params.means = np.load(params.global_means_path)[0, out_channels] # needed to standardize wind data
     params.stds = np.load(params.global_stds_path)[0, out_channels]
     params.device = device
@@ -160,7 +170,12 @@ def setup(params):
     if params.nettype == 'afno':
       model = AFNONet(params).to(device) 
     elif params.nettype == 'swin':
-      model = swinv2net(params).to(device)
+      if save_jit:
+        model = swinv2net(params, checkpoint_stages=False).to(device)
+        script = torch.jit.script(model)
+        torch.jit.save(script, expDir+'torchscripted.pt')
+      else:
+        model = swinv2net(params, checkpoint_stages=False).to(device)
     else:
       raise Exception("not implemented")
 
@@ -178,6 +193,7 @@ def setup(params):
         logging.info('Inference data from {}'.format(files_paths[yr]))
 
     valid_data_full = h5py.File(files_paths[yr], 'r')['fields']
+
 
     return valid_data_full, model, files_paths[yr]
 
@@ -438,12 +454,8 @@ if __name__ == '__main__':
         autoregressive_inference_filetag += "_vis"
     #autoregressive_inference_filetag += "_long_filt"
     # get data and models
-    valid_data_full, model, data_path = setup(params)
+    valid_data_full, model, data_path = setup(params, args.save_jit, expDir)
     year = int(os.path.basename(data_path).replace('.h5', ''))
-
-    if args.save_jit:
-        script = torch.jit.script(model)
-        torch.jit.save(script, expDir+'torchscripted.pt')
 
     #initialize lists for image sequences and RMSE/ACC
     valid_loss = []

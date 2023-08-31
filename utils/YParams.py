@@ -23,12 +23,23 @@ class YParams():
     if print_params:
       print("---------------------------------------------------")
 
+    # override setattr now so both the dict and the attrs get updated
+    self.__setattr__ = self.__custom_setattr__
+
+  def __custom_setattr__(self, key, val):
+    self.params[key] = val
+    super().__setattr__(key, val)
+
   def __getitem__(self, key):
     return self.params[key]
 
   def __setitem__(self, key, val):
     self.params[key] = val
     self.__setattr__(key, val)
+
+  def __custom_setattr__(self, key, val):
+    self.params[key] = val
+    super().__setattr__(key, val)
 
   def __contains__(self, key):
     return (key in self.params)

@@ -1,13 +1,16 @@
 import logging
 import math
 from typing import Tuple, Optional, List, Union, Any, Type
+from types import SimpleNamespace
+from ruamel.yaml import YAML
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.utils.checkpoint as checkpoint
+from torch.utils.checkpoint import checkpoint, checkpoint_sequential
 
 from timm.layers import DropPath, Mlp, ClassifierHead, to_2tuple, _assert
+
 
 # Adapted from timm v0.9.2:
 # https://github.com/huggingface/pytorch-image-models/blob/v0.9.2/timm/models/swin_transformer_v2_cr.py
@@ -23,7 +26,17 @@ def bhwc_to_bchw(x: torch.Tensor) -> torch.Tensor:
     return x.permute(0, 3, 1, 2)
 
 
-def swinv2net(params):
+def swin_from_yaml(fname, checkpoint_stages=False):
+    yaml = YAML()
+    with open(fname) as f:
+        hparams = yaml.load(f)
+    params = SimpleNamespace()
+    for k,v in hparams.items():
+        setattr(params, k, v)
+    return swinv2net(params, checkpoint_stages=checkpoint_stages)
+
+
+def swinv2net(params, checkpoint_stages=False):
     return SwinTransformerV2Cr(
                   img_size=params.img_size,
                   patch_size=params.patch_size,
@@ -37,6 +50,7 @@ def swinv2net(params):
                   full_pos_embed=params.full_pos_embed,
                   rel_pos=params.rel_pos,
                   mlp_ratio=params.mlp_ratio,
+                  checkpoint_stages=checkpoint_stages
     )
                   
 
@@ -619,7 +633,6 @@ class SwinTransformerV2CrStage(nn.Module):
         x = bhwc_to_bchw(x)
         return x
 
-
 class SwinTransformerV2Cr(nn.Module):
     r""" Swin Transformer V2
         A PyTorch impl of : `Swin Transformer V2: Scaling Up Capacity and Resolution`  -
@@ -671,6 +684,7 @@ class SwinTransformerV2Cr(nn.Module):
         weight_init='skip',
         full_pos_embed: bool = False,
         rel_pos: bool = True,
+        checkpoint_stages: bool = False,
         **kwargs: Any
     ) -> None:
         super(SwinTransformerV2Cr, self).__init__()
@@ -685,6 +699,8 @@ class SwinTransformerV2Cr(nn.Module):
         self.out_chans: int = out_chans
         self.feature_info = []
         self.full_pos_embed = full_pos_embed
+        self.checkpoint_stages = checkpoint_stages
+        self.depth = len(depths)
 
         self.patch_embed = PatchEmbed(
             img_size=img_size,
@@ -738,7 +754,10 @@ class SwinTransformerV2Cr(nn.Module):
         x = self.patch_embed(x)
         if self.full_pos_embed:
             x = x + self.pos_embed
-        x = self.stages(x)
+        if self.checkpoint_stages and not torch.jit.is_scripting():
+            x = checkpoint_sequential(self.stages, self.depth, x)
+        else:
+            x = self.stages(x)
         return x
 
     def forward_head(self, x: torch.Tensor) -> torch.Tensor:

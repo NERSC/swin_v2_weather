@@ -248,3 +248,9 @@ swin_73var_zen_abspos_ft:
   full_pos_embed: True
   rel_pos: False
 
+swin_73var_zabspos_lr1em3_ep70:
+  <<: *73var_swin
+  add_zenith: True
+  full_pos_embed: True
+  rel_pos: False
+  max_epochs: 70
