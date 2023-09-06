@@ -1,8 +1,8 @@
 #!/bin/bash
-config="swin_73var_p4_wr80_e768_d24_dpr01_lr1em3_abspos_roll_ft"
+config="swin_73var_zen_abspos_ft"
 yaml=./config/era5_swin.yaml
 run_num="0"
-scratch="/pscratch/sd/s/shas1693/results/era5_wind/"
+scratch="/pscratch/sd/s/shas1693/results/weather/era5_swin/"
 weights="${scratch}/${config}/${run_num}/training_checkpoints/best_ckpt.tar"
 
 #weights="${scratch}/${config}/${run_num}/training_checkpoints/best_ckpt.tar"
@@ -13,7 +13,7 @@ image=nersc/pytorch:ngc-23.03-v0
 env=$HOME/.local/perlmutter/nersc-pytorch-23.03-v0/
 
 export CUDA_VISIBLE_DEVICES=0
-year=2018_long
+year=2018
 override_dir="${scratch}/${config}/year${year}/"
 shifter --image=${image} --env PYTHONUSERBASE=${env} bash -c "python inference/inference.py --yaml_config=${yaml} --config=${config} --weights=${weights} --override_dir=${override_dir}"
 
