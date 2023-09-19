@@ -755,7 +755,7 @@ class SwinTransformerV2Cr(nn.Module):
         if self.full_pos_embed:
             x = x + self.pos_embed
         if self.checkpoint_stages and not torch.jit.is_scripting():
-            x = checkpoint_sequential(self.stages, self.depth, x)
+            x = checkpoint(self.stages, x, use_reentrant=False)
         else:
             x = self.stages(x)
         return x

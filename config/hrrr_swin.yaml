@@ -1,0 +1,5 @@
+base:  
+  # data config
+  num_data_workers: 2 # number of dataloader worker threads per proc
+  location: '/pscratch/sd/p/pharring/hrrr_example'
+  dt: 1
