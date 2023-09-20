@@ -391,11 +391,16 @@ class SwinTransformerV2CrBlock(nn.Module):
             cnt = 0
             for h in (
                     slice(0, -self.window_size[0]),
+                    slice(-self.window_size[0], -self.shift_size[0]),
                     slice(-self.shift_size[0], None)):
-                img_mask[:, h, :, :] = cnt
-                cnt += 1
+                for w in (
+                        slice(0, -self.window_size[1]),
+                        slice(-self.window_size[1], -self.shift_size[1]),
+                        slice(-self.shift_size[1], None)):
+                    img_mask[:, h, w, :] = cnt
+                    cnt += 1
             mask_windows = window_partition(img_mask, self.window_size)  # num_windows, window_size, window_size, 1
-            mask_windows = mask_windows.view(-1, self.window_area) # num_windows, window_size*window_size
+            mask_windows = mask_windows.view(-1, self.window_area)
             attn_mask = mask_windows.unsqueeze(1) - mask_windows.unsqueeze(2)
             attn_mask = attn_mask.masked_fill(attn_mask != 0, float(-100.0)).masked_fill(attn_mask == 0, float(0.0))
         else:
