@@ -52,6 +52,8 @@ class HrrrEra5Dataset(Dataset):
         self.dt = params.dt
         self.normalize = False #TODO implement HRRR+ERA5 normalization
         self._get_files_stats()
+        #self.means_hrrr = np.load(os.path.join(self.location, 'hrrr', 'stats', 'means.npy'))
+        #self.stds_hrrr = np.load(os.path.join(self.location, 'hrrr', 'stats', 'stds.npy'))
         
 
     def _get_files_stats(self):
@@ -65,7 +67,7 @@ class HrrrEra5Dataset(Dataset):
         self.years = [int(os.path.basename(x).replace('.zarr', '')) for x in self.era5_paths]
         self.n_years = len(self.era5_paths)
 
-        with xr.open_zarr(self.era5_paths[0]) as ds:
+        with xr.open_zarr(self.era5_paths[0], consolidated=True) as ds:
             self.era5_channels = ds.channel
             self.era5_lat = ds.latitude
             self.era5_lon = ds.longitude
@@ -79,7 +81,7 @@ class HrrrEra5Dataset(Dataset):
         years = [int(os.path.basename(x).replace('.zarr', '')) for x in self.hrrr_paths]
         assert years == self.years, 'Number of years for ERA5 in %s and HRRR in %s must match'%(os.path.join(self.location, "era5/*.zarr"),
                                                                                                 os.path.join(self.location, "hrrr/*.zarr"))
-        with xr.open_zarr(self.hrrr_paths[0]) as ds:
+        with xr.open_zarr(self.hrrr_paths[0], consolidated=True) as ds:
             self.hrrr_channels = ds.channel
             self.hrrr_lat = ds.latitude.isel(time=0) # TODO remove the .isel(time=0) once the time dim is removed from hrrr zarr lat/lon
             self.hrrr_lon = ds.longitude.isel(time=0)
@@ -94,13 +96,22 @@ class HrrrEra5Dataset(Dataset):
         '''
         Loop through all years and count the total number of samples
         '''
-        n_samples = 0
-        # TODO update this and/or __getitem__ logic to handle bad samples
-        #     for a given timestep t, both t and t+self.dt must be valid
-        for yidx, year in enumerate(self.years):
-            n_samples += 24*(365+calendar.isleap(year))
-        n_samples -= 1 # since HRRR indexing for each year starts at 00:01:00 UTC
-        return n_samples
+        print(self.years)
+        first_year = sorted(self.years)[0]
+        last_year = sorted(self.years)[-1]
+        first_sample = datetime(year=first_year, month=1, day=1, hour=1, minute=0, second=0)
+        last_sample = datetime(year=last_year, month=12, day=31, hour=23, minute=0, second=0)
+
+        all_datetimes = [first_sample + timedelta(hours=x) for x in range(int((last_sample-first_sample).total_seconds()/3600)+1)]
+
+        missing_samples = np.load(os.path.join(self.location, 'missing_samples.npy'), allow_pickle=True)
+
+        self.valid_samples = [x for x in all_datetimes if (x not in missing_samples) and (x + timedelta(hours=self.dt) not in missing_samples)]
+
+        logging.info('Total datetimes in training set are {} of which {} are valid'.format(len(all_datetimes), len(self.valid_samples)))
+        print(len(self.valid_samples))
+
+        return len(self.valid_samples)
 
     def _normalize_era5(self, img):
         if self.normalize:
@@ -151,16 +162,20 @@ class HrrrEra5Dataset(Dataset):
         return {
                 'era5':era5_pair,
                 'hrrr':hrrr_pair,
-                'time':time_pair,
+                #'time':(np.datetime64(time_pair[0]), np.datetime64(time_pair[1]))
                }
 
     def _global_idx_to_datetime(self, global_idx):
         '''
         Parse a global sample index and return the input/target timstamps as datetimes
         '''
-        base = datetime(self.years[0],1,1,1,0) # since HRRR indexing for each year starts at 00:01:00 UTC
-        inp = base + timedelta(hours=global_idx)
-        tar = base + timedelta(hours=global_idx + self.dt)
+        #base = datetime(self.years[0],1,1,1,0) # since HRRR indexing for each year starts at 00:01:00 UTC
+        #inp = base + timedelta(hours=global_idx)
+        #tar = base + timedelta(hours=global_idx + self.dt)
+
+        inp = self.valid_samples[global_idx]
+        tar = inp + timedelta(hours=self.dt)
+
         return inp, tar
 
     def _get_ds_handles(self, handles, paths, ts_inp, ts_tar):
@@ -171,7 +186,7 @@ class HrrrEra5Dataset(Dataset):
         for year in [ts_inp.year, ts_tar.year]:
             year_idx = self.years.index(year)
             if handles[year_idx] is None:
-                handles[year_idx] = xr.open_zarr(paths[year_idx])
+                handles[year_idx] = xr.open_zarr(paths[year_idx], consolidated=True)
             handles.append(handles[year_idx])
         return handles[0], handles[1], handles[0]==handles[1]
 
