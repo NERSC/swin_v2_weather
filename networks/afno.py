@@ -10,14 +10,12 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-#from timm.data import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
-from timm.models.layers import DropPath, trunc_normal_
+from timm.layers import DropPath, trunc_normal_
 import torch.fft
 from torch.nn.modules.container import Sequential
 from torch.utils.checkpoint import checkpoint_sequential
 from einops import rearrange, repeat
 from einops.layers.torch import Rearrange
-from utils.img_utils import PeriodicPad2d
 
 
 class Mlp(nn.Module):
@@ -66,9 +64,9 @@ class AFNO2D(nn.Module):
         self.scale = 0.02
 
         self.w1 = nn.Parameter(self.scale * torch.randn(2, self.num_blocks, self.block_size, self.block_size * self.hidden_size_factor))
-        self.b1 = nn.Parameter(self.scale * torch.randn(2, self.num_blocks, self.block_size * self.hidden_size_factor))
+#        self.b1 = nn.Parameter(self.scale * torch.randn(2, self.num_blocks, self.block_size * self.hidden_size_factor))
         self.w2 = nn.Parameter(self.scale * torch.randn(2, self.num_blocks, self.block_size * self.hidden_size_factor, self.block_size))
-        self.b2 = nn.Parameter(self.scale * torch.randn(2, self.num_blocks, self.block_size))
+#        self.b2 = nn.Parameter(self.scale * torch.randn(2, self.num_blocks, self.block_size))
 
     def forward(self, x):
         bias = x
@@ -91,26 +89,30 @@ class AFNO2D(nn.Module):
 
         o1_real[:, total_modes-kept_modes:total_modes+kept_modes, :kept_modes] = F.relu(
             torch.einsum('...bi,bio->...bo', x[:, total_modes-kept_modes:total_modes+kept_modes, :kept_modes].real, self.w1[0]) - \
-            torch.einsum('...bi,bio->...bo', x[:, total_modes-kept_modes:total_modes+kept_modes, :kept_modes].imag, self.w1[1]) + \
-            self.b1[0]
+            torch.einsum('...bi,bio->...bo', x[:, total_modes-kept_modes:total_modes+kept_modes, :kept_modes].imag, self.w1[1]) 
+#            + \
+#            self.b1[0]
         )
 
         o1_imag[:, total_modes-kept_modes:total_modes+kept_modes, :kept_modes] = F.relu(
             torch.einsum('...bi,bio->...bo', x[:, total_modes-kept_modes:total_modes+kept_modes, :kept_modes].imag, self.w1[0]) + \
-            torch.einsum('...bi,bio->...bo', x[:, total_modes-kept_modes:total_modes+kept_modes, :kept_modes].real, self.w1[1]) + \
-            self.b1[1]
+            torch.einsum('...bi,bio->...bo', x[:, total_modes-kept_modes:total_modes+kept_modes, :kept_modes].real, self.w1[1]) 
+#            + \
+#            self.b1[1]
         )
 
         o2_real[:, total_modes-kept_modes:total_modes+kept_modes, :kept_modes]  = (
             torch.einsum('...bi,bio->...bo', o1_real[:, total_modes-kept_modes:total_modes+kept_modes, :kept_modes], self.w2[0]) - \
-            torch.einsum('...bi,bio->...bo', o1_imag[:, total_modes-kept_modes:total_modes+kept_modes, :kept_modes], self.w2[1]) + \
-            self.b2[0]
+            torch.einsum('...bi,bio->...bo', o1_imag[:, total_modes-kept_modes:total_modes+kept_modes, :kept_modes], self.w2[1]) 
+#            + \
+#            self.b2[0]
         )
 
         o2_imag[:, total_modes-kept_modes:total_modes+kept_modes, :kept_modes]  = (
             torch.einsum('...bi,bio->...bo', o1_imag[:, total_modes-kept_modes:total_modes+kept_modes, :kept_modes], self.w2[0]) + \
-            torch.einsum('...bi,bio->...bo', o1_real[:, total_modes-kept_modes:total_modes+kept_modes, :kept_modes], self.w2[1]) + \
-            self.b2[1]
+            torch.einsum('...bi,bio->...bo', o1_real[:, total_modes-kept_modes:total_modes+kept_modes, :kept_modes], self.w2[1]) 
+#            + \
+#            self.b2[1]
         )
 
         x = torch.stack([o2_real, o2_imag], dim=-1)
@@ -162,24 +164,6 @@ class Block(nn.Module):
         x = x + residual
         return x
 
-class PrecipNet(nn.Module):
-    def __init__(self, params, backbone):
-        super().__init__()
-        self.params = params
-        self.patch_size = (params.patch_size, params.patch_size)
-        self.in_chans = params.N_in_channels
-        self.out_chans = params.N_out_channels
-        self.backbone = backbone
-        self.ppad = PeriodicPad2d(1)
-        self.conv = nn.Conv2d(self.out_chans, self.out_chans, kernel_size=3, stride=1, padding=0, bias=True)
-        self.act = nn.ReLU()
-
-    def forward(self, x):
-        x = self.backbone(x)
-        x = self.ppad(x)
-        x = self.conv(x)
-        x = self.act(x)
-        return x
 
 def glide_reflection(x, flip_dim=-2, glide_dim=-1):
     n_ew = x.shape[glide_dim]
@@ -217,13 +201,15 @@ class AFNONet(nn.Module):
         ):
         super().__init__()
         self.params = params
-        self.img_size = img_size
+        self.img_size = (params.img_shape_x, params.img_shape_y)
         self.patch_size = (params.patch_size, params.patch_size)
         self.in_chans = params.N_in_channels
         self.out_chans = params.N_out_channels
+        embed_dim = params.embed_dim
         self.num_features = self.embed_dim = embed_dim
         self.num_blocks = params.num_blocks 
         norm_layer = partial(nn.LayerNorm, eps=1e-6)
+        self.residual = self.params.residual
 
         depth = params.depth
 
@@ -231,7 +217,8 @@ class AFNONet(nn.Module):
         self.dfs = False
         if self.dfs:
             self.img_size = (2*img_size[0], img_size[1])
-        self.spec_filt = torch.tensor(spectral_filter(img_size[0], img_size[1]//2+1)).to(self.params.device, dtype=torch.float)
+        if self.use_spec:
+            self.spec_filt = torch.tensor(spectral_filter(img_size[0], img_size[1]//2+1)).to(self.params.device, dtype=torch.float)
 
         self.patch_embed = PatchEmbed(img_size=self.img_size, patch_size=self.patch_size, in_chans=self.in_chans, embed_dim=embed_dim)
         num_patches = self.patch_embed.num_patches
@@ -250,7 +237,7 @@ class AFNONet(nn.Module):
             num_blocks=self.num_blocks, sparsity_threshold=sparsity_threshold, hard_thresholding_fraction=hard_thresholding_fraction) 
         for i in range(depth)])
 
-        self.norm = norm_layer(embed_dim)
+        #self.norm = norm_layer(embed_dim)
 
         self.head = nn.Linear(embed_dim, self.out_chans*self.patch_size[0]*self.patch_size[1], bias=False)
 
@@ -283,8 +270,12 @@ class AFNONet(nn.Module):
         return x
 
     def forward(self, x):
+        if self.residual:
+            residual = x
+
         if self.dfs:
             x = sphere_to_torus(x)
+
         x = self.forward_features(x)
         x = self.head(x)
         x = rearrange(
@@ -299,6 +290,9 @@ class AFNONet(nn.Module):
             x = torus_to_sphere(x)
         if self.use_spec:
             x = filter_img(x, self.spec_filt)
+        if self.residual:
+            x = x + residual
+
         return x
 
 
