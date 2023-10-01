@@ -203,13 +203,12 @@ class AFNONet(nn.Module):
         self.params = params
         self.img_size = (params.img_shape_x, params.img_shape_y)
         self.patch_size = (params.patch_size, params.patch_size)
-        self.in_chans = params.N_in_channels
-        self.out_chans = params.N_out_channels
+        self.in_chans = params.n_in_channels
+        self.out_chans = params.n_out_channels
         embed_dim = params.embed_dim
         self.num_features = self.embed_dim = embed_dim
         self.num_blocks = params.num_blocks 
         norm_layer = partial(nn.LayerNorm, eps=1e-6)
-        self.residual = self.params.residual
 
         depth = params.depth
 
@@ -270,9 +269,6 @@ class AFNONet(nn.Module):
         return x
 
     def forward(self, x):
-        if self.residual:
-            residual = x
-
         if self.dfs:
             x = sphere_to_torus(x)
 
@@ -290,8 +286,6 @@ class AFNONet(nn.Module):
             x = torus_to_sphere(x)
         if self.use_spec:
             x = filter_img(x, self.spec_filt)
-        if self.residual:
-            x = x + residual
 
         return x
 

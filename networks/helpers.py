@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from functools import partial
 # networks
 from networks.afno import AFNONet
 from networks.swinv2 import swinv2net
@@ -11,7 +12,7 @@ class SingleStepWrapper(nn.Module):
         self.model = model_handle(params)
 
     def forward(self, inp):
-        yn = self.model(inpans)
+        y = self.model(inp)
         return y
 
 
@@ -36,11 +37,11 @@ class MultiStepWrapper(nn.Module):
 
 def get_model(params):
     if params.nettype == 'afno':
-        model = AFNONet(params)
+        model = partial(AFNONet)
     elif params.nettype == 'swin':
-        model = swinv2net(params)
+        model = partial(swinv2net)
     else:
-        raise Exception("not implemented")
+        raise Exception(f"model type {params.nettype} not implemented")
 
     # wrap into Multi-Step if requested
     if params.n_future > 0:

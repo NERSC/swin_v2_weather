@@ -12,6 +12,7 @@ swin: &SWIN
   drop_path_rate: 0.1
   full_pos_embed: True
   mlp_ratio: 4
+  activation_ckpt: false
 
   # general
   log_to_screen: True
@@ -28,6 +29,7 @@ swin: &SWIN
   batch_size: 64
   num_data_workers: 8
   n_future: 0 # for many future time steps
+  dt: 1 # time step
   add_zenith: False
   batch_size: 64
 

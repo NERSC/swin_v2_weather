@@ -40,14 +40,14 @@ class GetDataset(Dataset):
         self.location = location
         self.train = train
         self.dt = params.dt
-        self.in_channels = params.in_channel
+        self.in_channels = params.in_channels
         self.out_channels = params.out_channels
         self.n_in_channels = params.n_in_channels
         self.n_out_channels = params.n_out_channels
         self.n_future = params.n_future
         self.normalize = True
-        self.means = np.load(params.global_means_path)[0]
-        self.stds = np.load(params.global_stds_path)[0]
+        self.means = np.load(params.global_means_path)[0,self.in_channels]
+        self.stds = np.load(params.global_stds_path)[0,self.in_channels]
         self._get_files_stats()
 
     def _get_files_stats(self):
@@ -97,8 +97,11 @@ class GetDataset(Dataset):
         
         # pre-process and get the image fields
         inp_field = self.files[year_idx][local_idx,self.in_channels,0:self.img_shape_x,0:self.img_shape_y]
-        tar_field = self.files[year_idx][(local_idx + step):(local_idx + step * (self.n_future + 1) + 1):step,...
+        tar_field = self.files[year_idx][(local_idx + step):(local_idx + step * (self.n_future + 1) + 1):step, \
                                          self.out_channels,0:self.img_shape_x,0:self.img_shape_y]
+        # flatten time indices
+        tar_field = tar_field.reshape((self.n_out_channels * (self.n_future + 1), self.img_shape_x, self.img_shape_y))
+        # normalize images if needed
         inp, tar = self._normalize(inp_field), self._normalize(tar_field)
 
         return inp, tar

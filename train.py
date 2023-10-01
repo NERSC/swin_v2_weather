@@ -25,12 +25,12 @@ from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap as ruamelDict
 
 # metrics, utils, data
-from utils.data_loader_multifiles import get_data_loader
-from utils.weighted_acc_rmse import weighted_acc, weighted_rmse, weighted_rmse_torch, unlog_tp_torch
+from utils.data_loader_era5 import get_data_loader
+from utils.weighted_acc_rmse import weighted_rmse_torch
 from utils.loss import LpLoss
 from utils.img_utils import vis
 
-from network.helpers import get_model
+from networks.helpers import get_model
 
 def ckpt_identity(layer: Callable, *args: Any, **kwargs: Any) -> Any:
     """Identity function for when activation checkpointing is not needed"""
@@ -89,7 +89,7 @@ class Trainer():
         self.params['n_out_channels'] = len(self.params['out_channels'])
 
         if self.params.add_zenith:
-            params.n_in_channels += 1
+            self.params.n_in_channels += 1
 
         # init wandb
         if self.sweep_id:
@@ -139,19 +139,22 @@ class Trainer():
             logging_utils.log_versions()
 
         self.params['global_batch_size'] = self.params.batch_size
-        self.params['batch_size'] = int(self.params.batch_size//self.world_size)
+        self.params['local_batch_size'] = int(self.params.batch_size//self.world_size)
+
+        self.train_data_loader, self.train_dataset, self.train_sampler = get_data_loader(self.params, self.params.train_data_path, dist.is_initialized(), train=True)
+        self.valid_data_loader, self.valid_dataset = get_data_loader(self.params, self.params.valid_data_path, dist.is_initialized(), train=False)
+
+        self.params['img_shape_x'] = self.train_dataset.img_shape_x
+        self.params['img_shape_y'] = self.train_dataset.img_shape_y
 
         # dump the yaml used
         if self.world_rank == 0:
             hparams = ruamelDict()
             yaml = YAML()
             for key, value in self.params.params.items():
-                hparams[str(key)] = value
+                hparams[str(key)] = str(value)
                 with open(os.path.join(self.params['experiment_dir'], 'hyperparams.yaml'), 'w') as hpfile:
                     yaml.dump(hparams, hpfile)
-
-        self.train_data_loader, self.train_dataset, self.train_sampler = get_data_loader(self.params, self.params.train_data_path, dist.is_initialized(), train=True)
-        self.valid_data_loader, self.valid_dataset = get_data_loader(self.params, self.params.valid_data_path, dist.is_initialized(), train=False)
 
         self.loss_obj = LpLoss()
         self.model = get_model(self.params).to(self.device) 
@@ -159,35 +162,37 @@ class Trainer():
         if self.log_to_wandb:
             wandb.watch(self.model)
 
-        if self.params.optimizer_type == 'FusedAdam':
-            self.optimizer = optimizers.FusedAdam(self.model.parameters(), lr = self.params.lr)
+        if self.params.optimizer_type == 'adam':
+            self.optimizer = torch.optim.Adam(self.model.parameters(), lr =self.params.lr, betas=(0.9, 0.95), fused=True)
         elif self.params.optimizer_type == 'FusedLAMB':
             self.optimizer = optimizers.FusedLAMB(self.model.parameters(), lr = self.params.lr, weight_decay=self.params.weight_decay, max_grad_norm=5.)
         else:
-            self.optimizer = torch.optim.Adam(self.model.parameters(), lr =self.params.lr, weight_decay=self.params.weight_decay)
+            raise Exception(f"optimizer type {self.params.optimizer_type} not implemented")
+
 
         if self.params.enable_amp == True:
             self.gscaler = amp.GradScaler()
 
         if dist.is_initialized():
-        self.model = DistributedDataParallel(self.model,
-                                            device_ids=[self.local_rank],
-                                            output_device=[self.local_rank])
+            self.model = DistributedDataParallel(self.model,
+                                                device_ids=[self.local_rank],
+                                                output_device=[self.local_rank])
 
         self.iters = 0
         self.startEpoch = 0
+
+        if self.params.finetune and not self.params.resuming:
+            assert (
+                params.pretrained_checkpoint_path is not None
+            ), "error, please specify a valid pretrained checkpoint path"
+            if self.log_to_screen:
+                logging.info("Loading checkpoint %s"%self.params.pretrained_checkpoint_path)
+            self.restore_checkpoint(params.pretrained_checkpoint_path)
+
         if self.params.resuming:
             if self.log_to_screen:
                 logging.info("Loading checkpoint %s"%self.params.checkpoint_path)
             self.restore_checkpoint(self.params.checkpoint_path)
-
-        if self.params.two_step_training:
-        if self.params.resuming == False and self.params.pretrained == True:
-            logging.info("Starting from pretrained one-step afno model at %s"%self.params.pretrained_ckpt_path)
-            self.restore_checkpoint(self.params.pretrained_ckpt_path)
-            self.iters = 0
-            self.startEpoch = 0
-
                 
         self.epoch = self.startEpoch
 
@@ -196,7 +201,7 @@ class Trainer():
         elif self.params.scheduler == 'CosineAnnealingLR':
             self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=self.params.max_epochs, last_epoch=self.startEpoch-1)
         else:
-        self.scheduler = None
+            self.scheduler = None
 
         if self.log_to_screen:
             logging.info(self.model)
@@ -206,7 +211,7 @@ class Trainer():
 
     def train(self):
         if self.log_to_screen:
-        logging.info("Starting Training Loop...")
+            logging.info("Starting Training Loop...")
 
         best_valid_loss = 1.e6
         for epoch in range(self.startEpoch, self.params.max_epochs):
@@ -284,16 +289,16 @@ class Trainer():
     def validate_one_epoch(self):
         self.model.eval()
 
-        mult = torch.as_tensor(np.load(self.params.global_stds_path)[0, self.params.out_channels, 0, 0]).to(self.device)
+        mult = torch.as_tensor(np.load(self.params.global_stds_path)[0,self.params.out_channels,0,0]).to(self.device)
         valid_buff = torch.zeros((3), dtype=torch.float32, device=self.device)
         valid_loss = valid_buff[0].view(-1)
         valid_steps = valid_buff[2].view(-1)
-        valid_weighted_rmse = torch.zeros((self.params.N_out_channels), dtype=torch.float32, device=self.device)
-        valid_weighted_acc = torch.zeros((self.params.N_out_channels), dtype=torch.float32, device=self.device)
+        valid_weighted_rmse = torch.zeros((self.params.n_out_channels), dtype=torch.float32, device=self.device)
+        valid_weighted_acc = torch.zeros((self.params.n_out_channels), dtype=torch.float32, device=self.device)
 
         valid_start = time.time()
 
-        sample_idx = np.random.randint((n_valid_batches))
+        sample_idx = np.random.randint((len(self.valid_data_loader)))
         with torch.no_grad():
             for i, data in enumerate(self.valid_data_loader, 0):
                 inp, tar  = map(lambda x: x.to(self.device, dtype = torch.float), data)
@@ -348,9 +353,9 @@ class Trainer():
                 name = key[7:]
                 new_state_dict[name] = val 
             self.model.load_state_dict(new_state_dict)
-        self.iters = checkpoint['iters']
-        self.startEpoch = checkpoint['epoch']
-        if self.params.resuming:  #restore checkpoint is used for finetuning as well as resuming. If finetuning (i.e., not resuming), restore checkpoint does not load optimizer state, instead uses config specified lr.
+        if self.params.resuming:
+            self.iters = checkpoint['iters']
+            self.startEpoch = checkpoint['epoch']
             self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
 if __name__ == '__main__':
