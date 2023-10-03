@@ -3,7 +3,7 @@ import torch.nn as nn
 from functools import partial
 # networks
 from networks.afno import AFNONet
-from networks.swinv2 import swinv2net
+from networks.swinv2_global import swinv2net
 
 class SingleStepWrapper(nn.Module):
     """Wrapper for training a single step into the future"""

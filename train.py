@@ -326,7 +326,17 @@ class Trainer():
 
         valid_time = time.time() - valid_start
         valid_weighted_rmse = mult*torch.mean(valid_weighted_rmse, axis = 0)
-        logs = {'valid_loss': valid_buff_cpu[0], 'valid_rmse_u10': valid_weighted_rmse_cpu[0], 'valid_rmse_v10': valid_weighted_rmse_cpu[1]}
+        logs = {'valid_loss': valid_buff_cpu[0]}
+
+        # track specific variables
+        if hasattr(self.params, 'track_channels'):
+            idxes = [self.params.channel_names.index(varname) for varname in self.params.track_channels]
+        else:
+            self.params.track_channels = ['u10m', 'v10m']
+            idxes = [0, 1]
+
+        for idx,var in zip(idxes,self.params.track_channels):
+            logs.update({f'valid_rmse_{var}': valid_weighted_rmse_cpu[idx]})
         
         if self.log_to_wandb:
             fig = vis(fields)

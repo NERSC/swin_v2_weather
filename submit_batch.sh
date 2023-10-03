@@ -1,5 +1,5 @@
 #!/bin/bash -l
-#SBATCH --time=06:00:00
+#SBATCH --time=10:00:00
 #SBATCH -C gpu
 #SBATCH --account=m4416
 #SBATCH -q regular
@@ -9,9 +9,10 @@
 #SBATCH --cpus-per-task=32
 #SBATCH --image=nersc/pytorch:ngc-23.07-v0
 #SBATCH --module=gpu,nccl-2.18
+#SBATCH -J swin
 #SBATCH -o %x-%j.out
 
-config_file=./config/afno.yaml
+config_file=./config/swin.yaml
 config=$1
 run_num='0'
 
