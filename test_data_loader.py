@@ -4,18 +4,20 @@ import numpy as np
 import random
 import h5py
 from utils.YParams import YParams
-from networks.afno import AFNONet
+from network/helpers import get_model
 import matplotlib.pyplot as plt
 
-config_name = 'afno_backbone_ec3p_r2i1p1f1_p4_e768_depth12_lr1em3'
-params = YParams('config/hrmip.yaml', config_name)
+config_name = 'swin_73var'
+params = YParams('config/swin.yaml', config_name)
 
 params.batch_size = 1
-dataloader, dataset, sampler = get_data_loader(params, params.data_path, distributed=False, train=True)
-valid_dataloader, dataset_valid  = get_data_loader(params, params.data_path, distributed=False, train=False)
+dataloader, dataset, sampler = get_data_loader(params, params.train_data_path, distributed=False)
+valid_dataloader, dataset_valid  = get_data_loader(params, params.valid_data_path, distributed=False)
+
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-model = AFNONet(params).to(device) 
+model = get_model(params).to(device)
 iters = 0
+
 with torch.no_grad():
   for i, data in enumerate(valid_dataloader, 0):
     if i > 1:

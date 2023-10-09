@@ -12,6 +12,9 @@ import h5py
 def worker_init(wrk_id):
     np.random.seed(torch.utils.data.get_worker_info().seed%(2**32 - 1))
 
+def is_leap_year(yr):
+    return (yr%4 == 0)
+
 def get_data_loader(params, files_pattern, distributed, train):
     dataset = GetDataset(params, files_pattern, train)
 
@@ -24,7 +27,7 @@ def get_data_loader(params, files_pattern, distributed, train):
                             batch_size=int(params.local_batch_size),
                             num_workers=params.num_data_workers,
                             shuffle=(sampler is None),
-                            sampler=sampler if train else None,
+                            sampler=sampler,
                             worker_init_fn=worker_init,
                             drop_last=True,
                             pin_memory=torch.cuda.is_available())
@@ -56,8 +59,16 @@ class GetDataset(Dataset):
         self.years = [int(os.path.splitext(os.path.basename(x))[0][-4:]) for x in self.files_paths]
         self.n_years = len(self.files_paths)
 
-        with h5py.File(self.files_paths[0], 'r') as _f:
-            logging.info("Getting file stats from {}".format(self.files_paths[0]))
+        # dont use leap year unless they are all leap years
+        stats_idx = 0
+        while is_leap_year(self.years[stats_idx]):
+            stats_idx += 1
+            if stats_idx >= self.n_years:
+                stats_idx = 0
+                break
+
+        with h5py.File(self.files_paths[stats_idx], 'r') as _f:
+            logging.info("Getting file stats from {}".format(self.files_paths[stats_idx]))
             self.n_samples_per_year = _f['fields'].shape[0]
             self.img_shape_x = self.params.img_size[0]
             self.img_shape_y = self.params.img_size[1]

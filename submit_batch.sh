@@ -1,6 +1,6 @@
 #!/bin/bash -l
-#SBATCH --time=10:00:00
-#SBATCH -C gpu
+#SBATCH --time=06:00:00
+#SBATCH -C 'gpu&hbm80g'
 #SBATCH --account=m4416
 #SBATCH -q regular
 #SBATCH --nodes=16
@@ -9,10 +9,10 @@
 #SBATCH --cpus-per-task=32
 #SBATCH --image=nersc/pytorch:ngc-23.07-v0
 #SBATCH --module=gpu,nccl-2.18
-#SBATCH -J swin
+#SBATCH -J vit_l2
 #SBATCH -o %x-%j.out
 
-config_file=./config/swin.yaml
+config_file=./config/vit.yaml
 config=$1
 run_num='0'
 

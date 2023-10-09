@@ -27,7 +27,7 @@ from ruamel.yaml.comments import CommentedMap as ruamelDict
 # metrics, utils, data
 from utils.data_loader_era5 import get_data_loader
 from utils.weighted_acc_rmse import weighted_rmse_torch
-from utils.loss import LpLoss
+from utils.loss import LpLoss, GeometricLpLoss
 from utils.img_utils import vis
 
 from networks.helpers import get_model
@@ -152,11 +152,14 @@ class Trainer():
             hparams = ruamelDict()
             yaml = YAML()
             for key, value in self.params.params.items():
-                hparams[str(key)] = str(value)
+                hparams[str(key)] = value.tolist() if isinstance(value, np.ndarray) else value
                 with open(os.path.join(self.params['experiment_dir'], 'hyperparams.yaml'), 'w') as hpfile:
                     yaml.dump(hparams, hpfile)
 
-        self.loss_obj = LpLoss()
+        if self.params.loss_type == 'l2':
+            self.loss_obj = LpLoss()
+        elif self.params.loss_type == 'geo':
+            self.loss_obj = GeometricLpLoss(img_size=tuple(self.params.img_size), device=self.device)
         self.model = get_model(self.params).to(self.device) 
 
         if self.log_to_wandb:
@@ -298,7 +301,7 @@ class Trainer():
 
         valid_start = time.time()
 
-        sample_idx = np.random.randint((len(self.valid_data_loader)))
+        sample_idx = np.random.randint(len(self.valid_data_loader))
         with torch.no_grad():
             for i, data in enumerate(self.valid_data_loader, 0):
                 inp, tar  = map(lambda x: x.to(self.device, dtype = torch.float), data)
@@ -331,11 +334,12 @@ class Trainer():
         # track specific variables
         if hasattr(self.params, 'track_channels'):
             idxes = [self.params.channel_names.index(varname) for varname in self.params.track_channels]
+            track_channels = self.params.track_channels
         else:
-            self.params.track_channels = ['u10m', 'v10m']
+            track_channels = ['u10m', 'v10m']
             idxes = [0, 1]
 
-        for idx,var in zip(idxes,self.params.track_channels):
+        for idx,var in zip(idxes,track_channels):
             logs.update({f'valid_rmse_{var}': valid_weighted_rmse_cpu[idx]})
         
         if self.log_to_wandb:

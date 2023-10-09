@@ -4,6 +4,7 @@ from functools import partial
 # networks
 from networks.afno import AFNONet
 from networks.swinv2_global import swinv2net
+from networks.vit import ViT
 
 class SingleStepWrapper(nn.Module):
     """Wrapper for training a single step into the future"""
@@ -40,6 +41,8 @@ def get_model(params):
         model = partial(AFNONet)
     elif params.nettype == 'swin':
         model = partial(swinv2net)
+    elif params.nettype == 'vit':
+        model = partial(ViT)
     else:
         raise Exception(f"model type {params.nettype} not implemented")
 

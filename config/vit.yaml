@@ -1,13 +1,12 @@
 ### base config ###
-afno: &AFNO
+vit: &VIT
   #afno hyperparams
-  nettype: 'afno'
-  num_blocks: 8
+  nettype: 'vit'
   embed_dim: 768
-  patch_size: 8
-  drop_path_rate: 0.
-  drop_rate: 0.
-  depth: 12
+  depth: 24
+  dropout: 0.1
+  patch_size: 4
+  num_heads: 8
   activation_ckpt: false
 
   # general
@@ -15,13 +14,13 @@ afno: &AFNO
   log_to_wandb: true
   save_checkpoint: true
   finetune: false
-  project: "ERA5_sfno"
+  project: "ERA5_vit"
   entity: "weatherbenching"
 
   # optimizer and other params
   optimizer_type: 'adam'
   scheduler: 'CosineAnnealingLR'
-  max_epochs: 150
+  max_epochs: 70
   lr: 1E-3
   batch_size: 64
   num_data_workers: 8
@@ -40,14 +39,10 @@ afno: &AFNO
   time_means_path:   '/pscratch/sd/j/jpathak/34var/stats/time_means.npy'
   global_means_path: '/pscratch/sd/j/jpathak/34var/stats/global_means.npy'
   global_stds_path:  '/pscratch/sd/j/jpathak/34var/stats/global_stds.npy'
-  exp_dir: '/pscratch/sd/s/shas1693/results/afno'
+  exp_dir: '/pscratch/sd/s/shas1693/results/vit'
 
-afno_short:
-  <<: *AFNO
-  batch_size: 4
-
-afno_backbone_73var: &73var
-  <<: *AFNO
+vit_73var: &73var
+  <<: *VIT
   batch_size: 64
   in_channels: [0, 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
   out_channels: [0, 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
@@ -57,5 +52,10 @@ afno_backbone_73var: &73var
   time_means_path:   '/pscratch/sd/p/pharring/73var-6hourly/staging/stats/time_means.npy'
   global_means_path: '/pscratch/sd/p/pharring/73var-6hourly/staging/stats/global_means.npy'
   global_stds_path:  '/pscratch/sd/p/pharring/73var-6hourly/staging/stats/global_stds.npy'
-  add_zenith: true
+  add_zenith: false
 
+vit_short:
+  <<: *73var
+  batch_size: 4
+  max_epochs: 8
+  log_to_wandb: false
