@@ -5,6 +5,7 @@ from functools import partial
 from networks.afno import AFNONet
 from networks.swinv2_global import swinv2net
 from networks.vit import ViT
+from networks.sfno import SphericalFourierNeuralOperatorNet
 
 class SingleStepWrapper(nn.Module):
     """Wrapper for training a single step into the future"""
@@ -39,6 +40,8 @@ class MultiStepWrapper(nn.Module):
 def get_model(params):
     if params.nettype == 'afno':
         model = partial(AFNONet)
+    elif params.nettype == 'sfno':
+        model = partial(SphericalFourierNeuralOperatorNet)
     elif params.nettype == 'swin':
         model = partial(swinv2net)
     elif params.nettype == 'vit':
