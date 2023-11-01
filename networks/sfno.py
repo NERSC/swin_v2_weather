@@ -455,6 +455,12 @@ class SphericalFourierNeuralOperatorNet(Module):
         self.num_layers = (
             params.num_layers if hasattr(params, "num_layers") else num_layers
         )
+        self.drop_rate = (
+            params.drop_rate if hasattr(params, "drop_rate") else drop_rate
+        )
+        self.drop_path_rate = (
+            params.drop_path_rate if hasattr(params, "drop_path_rate") else drop_path_rate
+        )
         self.repeat_layers = (
             params.repeat_layers if hasattr(params, "repeat_layers") else repeat_layers
         )
@@ -665,8 +671,8 @@ class SphericalFourierNeuralOperatorNet(Module):
             fblock_mlp_hidden_name = "fout"
 
         # dropout
-        self.pos_drop = nn.Dropout(p=drop_rate) if drop_rate > 0.0 else nn.Identity()
-        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, self.num_layers)]
+        self.pos_drop = nn.Dropout(p=self.drop_rate) if self.drop_rate > 0.0 else nn.Identity()
+        dpr = [x.item() for x in torch.linspace(0, self.drop_path_rate, self.num_layers)]
 
         # pick norm layer
         if self.normalization_layer == "layer_norm":
@@ -740,7 +746,7 @@ class SphericalFourierNeuralOperatorNet(Module):
                 filter_type=filter_type,
                 operator_type=operator_type,
                 mlp_ratio=self.mlp_ratio,
-                drop_rate=drop_rate,
+                drop_rate=self.drop_rate,
                 drop_path=dpr[i],
                 act_layer=self.activation_function,
                 norm_layer=norm_layer,
