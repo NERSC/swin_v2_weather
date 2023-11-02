@@ -180,6 +180,45 @@ sfno_73ch_cos_zenith: &SFNO_73CH_COS_ZENITH
     wireup_store: tcp
     world_size: 64
 
+sfno_73ch: &SFNO_73CH
+    <<: *SFNO_73CH_COS_ZENITH
+    N_in_channels: 73
+    batch_size: 64
+    world_size: 64
+    loss_type: 'geo'
+    img_size: [720, 1440]
+    in_channels: [0, 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+    out_channels: [0, 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+    global_means_path: /pscratch/sd/p/pharring/73var-6hourly/staging/stats/global_means.npy
+    global_stds_path: /pscratch/sd/p/pharring/73var-6hourly/staging/stats/global_stds.npy
+    ifs_acc_path: /ifs
+    inf_data_path: /pscratch/sd/p/pharring/73var-6hourly/staging/out_of_sample
+    landmask_path: /invariants/e5.oper.invariant.128_172_lsm.ll025sc.1979010100_1979010100.nc
+    orography_path: /invariants/e5.oper.invariant.128_129_z.ll025sc.1979010100_1979010100.nc
+    time_means_path: /pscratch/sd/p/pharring/73var-6hourly/staging/stats/time_means.npy
+    train_data_path: /pscratch/sd/p/pharring/73var-6hourly/staging/train
+    valid_autoreg_steps: 1
+    valid_data_path: /pscratch/sd/p/pharring/73var-6hourly/staging/test
+    exp_dir: '/pscratch/sd/j/jwillard/era5_wind/'
+    project: "ERA5_sfno"
+    entity: "weatherbenching"
+    log_to_wandb: true
+    wireup_info: env
+    wireup_store: tcp
+    optimizer_type: adam
+    save_checkpoint: true
+    add_zenith: true
+    max_epochs: 60
+    scheduler_T_max: 60
+    scale_factor: 6
+    drop_rate: 0
+    drop_path_rate: 0
+
+sfno_73ch_e768:
+    <<: *SFNO_73CH
+    embed_dim: 768
+    resuming: false
+
 sfno_73ch_cos_zenith_inference:
     <<: *SFNO_73CH_COS_ZENITH
     pretrained_checkpoint_path: './runs/sfno_73ch_cos_zenith/01/training_checkpoints/best_ckpt_mp0.tar'
@@ -191,32 +230,6 @@ sfno_73ch_cos_zenith_ensemble:
     ifs_acc_path: None
     noise_amplitude: 0.02
     pretrained_checkpoint_path: './runs/sfno_73ch_cos_zenith/01/training_checkpoints/best_ckpt_mp0.tar'
-
-sfno_73ch: &SFNO_73CH
-    <<: *SFNO_73CH_COS_ZENITH
-    N_in_channels: 73
-    batch_size: 64
-    world_size: 64
-    global_means_path: /pscratch/sd/p/pharring/73var-6hourly/staging/stats/global_means.npy
-    global_stds_path: /pscratch/sd/p/pharring/73var-6hourly/staging/stats/global_stds.npy
-    ifs_acc_path: /ifs
-    inf_data_path: /pscratch/sd/p/pharring/73var-6hourly/staging/out_of_sample
-    landmask_path: /invariants/e5.oper.invariant.128_172_lsm.ll025sc.1979010100_1979010100.nc
-    orography_path: /invariants/e5.oper.invariant.128_129_z.ll025sc.1979010100_1979010100.nc
-    time_means_path: /pscratch/sd/p/pharring/73var-6hourly/staging/stats/time_means.npy
-    train_data_path: /pscratch/sd/p/pharring/73var-6hourly/staging/train
-    valid_autoreg_steps: 1
-    valid_data_path: /pscratch/sd/p/pharring/73var-6hourly/staging/test
-    exp_dir: '/pscratch/sd/s/shas1693/results/sfno'
-    wandb_project: "ERA5_sfno"
-    wandb_entity: "weatherbenching"
-    log_to_wandb: true
-    wireup_info: env
-    wireup_store: tcp
-    add_zenith: true
-    max_epochs: 60
-    scheduler_T_max: 60
-    scale_factor: 4
 
 sfno_73ch_2step:
     <<: *SFNO_73CH

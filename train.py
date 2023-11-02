@@ -80,8 +80,8 @@ class Trainer():
         self.params['group'] = args.config
         self.config = args.config 
         self.run_num = args.run_num
-        self.ckpt_fn = torch.utils.checkpoint.checkpoint if params.activation_ckpt else ckpt_identity
-
+        self.ckpt_fn = torch.utils.checkpoint.checkpoint if hasattr(params, 'activation_ckpt') and params.activation_ckpt else ckpt_identity
+    
     def build_and_launch(self):
         self.params['in_channels'] = np.array(self.params['in_channels'])
         self.params['out_channels'] = np.array(self.params['out_channels'])
