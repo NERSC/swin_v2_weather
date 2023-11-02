@@ -211,6 +211,8 @@ sfno_73ch: &SFNO_73CH
     max_epochs: 60
     scheduler_T_max: 60
     scale_factor: 6
+    drop_rate: 0
+    drop_path_rate: 0
 
 sfno_73ch_e768:
     <<: *SFNO_73CH
