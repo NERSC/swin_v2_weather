@@ -179,7 +179,8 @@ class Trainer():
         if dist.is_initialized():
             self.model = DistributedDataParallel(self.model,
                                                 device_ids=[self.local_rank],
-                                                output_device=[self.local_rank])
+                                                output_device=[self.local_rank], 
+                                                static_graph=(params.checkpointing>0))
 
         self.iters = 0
         self.startEpoch = 0
