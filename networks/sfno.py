@@ -17,6 +17,8 @@
 from dataclasses import dataclass
 from functools import partial
 from typing import Any, Tuple
+from types import SimpleNamespace
+from ruamel.yaml import YAML
 
 import torch
 import torch.nn as nn
@@ -63,6 +65,20 @@ from modulus.utils.sfno.distributed.mappings import (
     scatter_to_parallel_region,
 )
 
+
+def sfno_from_yaml(fname):
+    yaml = YAML()
+    with open(fname) as f:
+        hparams = yaml.load(f)
+    params = SimpleNamespace()
+    for k,v in hparams.items():
+        setattr(params, k, v)
+    return sfnonet(params)
+
+
+def sfnonet(params):
+    return SphericalFourierNeuralOperatorNet(
+        params=params)
 
 @dataclass
 class MetaData(ModelMetaData):
