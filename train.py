@@ -168,7 +168,7 @@ class Trainer():
         if self.params.optimizer_type == 'adam':
             self.optimizer = torch.optim.Adam(self.model.parameters(), lr =self.params.lr, betas=(0.9, 0.95), fused=True)
         elif self.params.optimizer_type == 'FusedLAMB':
-            self.optimizer = optimizers.FusedLAMB(self.model.parameters(), lr = self.params.lr, weight_decay=self.params.weight_decay, max_grad_norm=5.)
+            self.optimizer = optimizers.FusedLAMB(self.model.parameters(), lr = self.params.lr, max_grad_norm=5.)
         else:
             raise Exception(f"optimizer type {self.params.optimizer_type} not implemented")
 
