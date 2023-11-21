@@ -57,9 +57,13 @@ class Attention(nn.Module):
         q, k = self.q_norm(q), self.k_norm(k) # B, H, N, Q
 
         if self.lin_attn:
-            q = q.softmax(dim=-1)
-            k = k.softmax(dim=-1)
-            scale = (1. / N)
+#            q = q.softmax(dim=-1)
+#            k = k.softmax(dim=-1)
+#            scale = (1. / N)
+            q = q / q.norm(dim=-1,keepdim=True, p=1)
+            k = k / k.norm(dim=-1,keepdim=True, p=1)
+            k_cumsum = k.sum(dim=-2, keepdim=True)
+            D_inv = 1. / (q * k_cumsum).abs().sum(dim=-1, keepdim=True)
             attn = k.transpose(-2, -1) @ v
             x = (q @ attn) * scale
         else:

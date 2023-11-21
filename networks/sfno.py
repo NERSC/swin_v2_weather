@@ -64,7 +64,6 @@ from modulus.utils.sfno.distributed.mappings import (
 )
 
 
-
 # @torch.jit.script
 def drop_path(
     x: torch.Tensor, drop_prob: float = 0.0, training: bool = False
