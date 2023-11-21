@@ -42,8 +42,6 @@ from modulus.models.module import Module
 # wrap fft, to unify interface to spectral transforms
 from modulus.models.sfno.initialization import trunc_normal_
 from modulus.models.sfno.layers import (
-    MLP,
-    DropPath,
     EncoderDecoder,
     RealFFT2,
     SpectralAttention2d,
@@ -66,6 +64,84 @@ from modulus.utils.sfno.distributed.mappings import (
 )
 
 
+# @torch.jit.script
+def drop_path(
+    x: torch.Tensor, drop_prob: float = 0.0, training: bool = False
+) -> torch.Tensor:  # pragma: no cover
+    """Drop paths (Stochastic Depth) per sample (when applied in main path of
+    residual blocks).
+    This is the same as the DropConnect impl for EfficientNet, etc networks, however,
+    the original name is misleading as 'Drop Connect' is a different form of dropout in
+    a separate paper. See discussion:
+        https://github.com/tensorflow/tpu/issues/494#issuecomment-532968956
+    We've opted for changing the layer and argument names to 'drop path' rather than
+    mix DropConnect as a layer name and use 'survival rate' as the argument.
+    """
+    if drop_prob == 0.0 or not training:
+        return x
+    keep_prob = 1.0 - drop_prob
+    shape = (x.shape[0],) + (1,) * (
+        x.ndim - 1
+    )  # work with diff dim tensors, not just 2d ConvNets
+    random_tensor = keep_prob + torch.rand(shape, dtype=x.dtype, device=x.device)
+    random_tensor.floor_()  # binarize
+    output = x.div(keep_prob) * random_tensor
+    return output
+
+class DropPath(nn.Module):
+    """
+    Drop paths (Stochastic Depth) per sample (when applied in main path of residual
+    blocks).
+    """
+
+    def __init__(self, drop_prob=None):  # pragma: no cover
+        super(DropPath, self).__init__()
+        self.drop_prob = drop_prob
+
+    def forward(self, x):  # pragma: no cover
+        return drop_path(x, self.drop_prob, self.training)
+
+
+
+class MLP(nn.Module):
+    """Basic CNN with support for gradient checkpointing."""
+
+    def __init__(
+        self,
+        in_features,
+        hidden_features=None,
+        out_features=None,
+        act_layer="gelu",
+        output_bias=True,
+        drop_rate=0.0,
+        checkpointing=0,
+        **kwargs,
+    ):  # pragma: no cover
+        super(MLP, self).__init__()
+        self.checkpointing = checkpointing
+        out_features = out_features or in_features
+        hidden_features = hidden_features or in_features
+
+        fc1 = nn.Conv2d(in_features, hidden_features, 1, bias=True)
+        act = get_activation(act_layer)
+        fc2 = nn.Conv2d(hidden_features, out_features, 1, bias=output_bias)
+        if drop_rate > 0.0:
+            drop = nn.Dropout(drop_rate)
+            self.fwd = nn.Sequential(fc1, act, drop, fc2, drop)
+        else:
+            self.fwd = nn.Sequential(fc1, act, fc2)
+
+    @torch.jit.ignore
+    def checkpoint_forward(self, x):  # pragma: no cover
+        """Forward method with support for gradient checkpointing"""
+        return checkpoint(self.fwd, x, use_reentrant=False)
+
+    def forward(self, x):  # pragma: no cover
+        if self.checkpointing >= 2:
+            return self.checkpoint_forward(x)
+        else:
+            return self.fwd(x)
+        
 def sfno_from_yaml(fname):
     yaml = YAML()
     with open(fname) as f:
@@ -885,7 +961,7 @@ class SphericalFourierNeuralOperatorNet(Module):
         for r in range(self.repeat_layers):
             for blk in self.blocks:
                 if self.checkpointing >= 3:
-                    x = checkpoint(blk, x)
+                    x = checkpoint(blk, x,use_reentrant=False)
                 else:
                     x = blk(x)
 
@@ -912,9 +988,9 @@ class SphericalFourierNeuralOperatorNet(Module):
             else:
                 # only take the predicted channels
                 residual = x[..., : self.out_chans, :, :]
-
         if self.checkpointing >= 1:
-            x = checkpoint(self.encoder, x)
+            x = checkpoint(self.encoder, x, use_reentrant=False)
+
         else:
             x = self.encoder(x)
 
@@ -957,7 +1033,7 @@ class SphericalFourierNeuralOperatorNet(Module):
             x = torch.cat((x, residual), dim=1)
 
         if self.checkpointing >= 1:
-            x = checkpoint(self.decoder, x)
+            x = checkpoint(self.decoder, x, use_reentrant=False)
         else:
             x = self.decoder(x)
 
