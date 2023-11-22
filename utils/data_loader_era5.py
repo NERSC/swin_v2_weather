@@ -22,7 +22,7 @@ def get_data_loader(params, files_pattern, distributed, train):
     dataset = GetDataset(params, files_pattern, train)
 
     if distributed:
-        sampler = DistributedSampler(dataset, shuffle=train)
+        sampler = DistributedSampler(dataset, shuffle=train, num_replicas=params.data_num_shards, rank=params.data_shard_id)
     else:
         sampler = None
     
