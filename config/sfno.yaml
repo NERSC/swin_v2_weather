@@ -33,6 +33,7 @@ sfno_73ch_cos_zenith: &SFNO_73CH_COS_ZENITH
     crop_size_x: None
     crop_size_y: None
     cuda_graph_mode: None
+    data_loader_config: "pytorch"
     data_num_shards: 64
     disable_ddp: false
     dt: 1
@@ -183,6 +184,7 @@ sfno_73ch_cos_zenith: &SFNO_73CH_COS_ZENITH
 sfno_73ch: &SFNO_73CH
     <<: *SFNO_73CH_COS_ZENITH
     N_in_channels: 73
+    data_loader_config: "dali"
     batch_size: 64
     world_size: 64
     loss_type: 'geo'
@@ -199,7 +201,7 @@ sfno_73ch: &SFNO_73CH
     train_data_path: /pscratch/sd/p/pharring/73var-6hourly/staging/train
     valid_autoreg_steps: 1
     valid_data_path: /pscratch/sd/p/pharring/73var-6hourly/staging/test
-    exp_dir: '/pscratch/sd/j/jwillard/era5_wind/'
+    exp_dir: '/pscratch/sd/s/shas1693/results/sfno'
     project: "ERA5_sfno"
     entity: "weatherbenching"
     log_to_wandb: true

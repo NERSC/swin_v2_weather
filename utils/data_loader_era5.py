@@ -164,8 +164,11 @@ class GetDataset(Dataset):
         inp, tar = self._normalize(inp_field), self._normalize(tar_field)
 
         if self.params.add_zenith:
-            zen_inp, _ = self._compute_zenith_angle(local_idx, year_idx) #compute the zenith angles for the input.
+            zen_inp, zen_tar = self._compute_zenith_angle(local_idx, year_idx) #compute the zenith angles for the input.
             zen_inp = zen_inp[:,:self.img_shape_x] #adjust to match input dimensions
-            inp = torch.cat([inp, zen_inp], dim=0)  # Concatenate input with zenith angle
+            zen_tar = zen_tar[:,:self.img_shape_x] #adjust to match input dimensions
+            result = inp, tar, zen_inp, zen_tar
+        else:
+            result = inp, tar
 
-        return inp, tar
+        return result

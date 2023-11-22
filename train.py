@@ -25,10 +25,11 @@ from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap as ruamelDict
 
 # metrics, utils, data
-from utils.data_loader_era5 import get_data_loader
+from utils import get_data_loader_distributed
 from utils.weighted_acc_rmse import weighted_rmse_torch
 from utils.loss import LpLoss, GeometricLpLoss
 from utils.img_utils import vis
+from utils.preprocess_utils import preprocess
 
 from networks.helpers import get_model
 
@@ -78,6 +79,9 @@ class Trainer():
         self.params = params
         self.params['name'] = args.config + '_' + str(args.run_num)
         self.params['group'] = args.config
+        # for dali data loader, set the actual number of data shards and id
+        self.params['data_num_shards'] = self.world_size
+        self.params['data_shard_id'] = self.world_rank
         self.config = args.config 
         self.run_num = args.run_num
         self.ckpt_fn = torch.utils.checkpoint.checkpoint if hasattr(params, 'activation_ckpt') and params.activation_ckpt else ckpt_identity
@@ -141,8 +145,8 @@ class Trainer():
         self.params['global_batch_size'] = self.params.batch_size
         self.params['local_batch_size'] = int(self.params.batch_size//self.world_size)
 
-        self.train_data_loader, self.train_dataset, self.train_sampler = get_data_loader(self.params, self.params.train_data_path, dist.is_initialized(), train=True)
-        self.valid_data_loader, self.valid_dataset = get_data_loader(self.params, self.params.valid_data_path, dist.is_initialized(), train=False)
+        self.train_data_loader, self.train_dataset, self.train_sampler = get_data_loader_distributed(self.params, self.params.train_data_path, dist.is_initialized(), train=True)
+        self.valid_data_loader, self.valid_dataset = get_data_loader_distributed(self.params, self.params.valid_data_path, dist.is_initialized(), train=False)
 
         self.params['img_shape_x'] = self.train_dataset.img_shape_x
         self.params['img_shape_y'] = self.train_dataset.img_shape_y
@@ -161,6 +165,10 @@ class Trainer():
         elif self.params.loss_type == 'geo':
             self.loss_obj = GeometricLpLoss(img_size=tuple(self.params.img_size), device=self.device)
         self.model = get_model(self.params).to(self.device) 
+
+
+        # data preproc
+        self.preprocess = preprocess
 
         if self.log_to_wandb:
             wandb.watch(self.model)
@@ -219,7 +227,7 @@ class Trainer():
 
         best_valid_loss = 1.e6
         for epoch in range(self.startEpoch, self.params.max_epochs):
-            if dist.is_initialized():
+            if dist.is_initialized() and (self.train_sampler is not None):
                 self.train_sampler.set_epoch(epoch)
 
             start = time.time()
@@ -260,6 +268,7 @@ class Trainer():
         
         for i, data in enumerate(self.train_data_loader, 0):
             tr_start = time.time()
+            data = self.preprocess(self.params, data)
             inp, tar = map(lambda x: x.to(self.device, dtype = torch.float), data)      
             self.model.zero_grad()
             with amp.autocast(self.params.enable_amp):
@@ -305,6 +314,7 @@ class Trainer():
         sample_idx = np.random.randint(len(self.valid_data_loader))
         with torch.no_grad():
             for i, data in enumerate(self.valid_data_loader, 0):
+                data = self.preprocess(self.params, data)
                 inp, tar  = map(lambda x: x.to(self.device, dtype = torch.float), data)
                 gen = self.model(inp).to(self.device, dtype = torch.float)
                 valid_loss += self.loss_obj(gen, tar) 
