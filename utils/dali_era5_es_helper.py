@@ -51,9 +51,12 @@ class ERA5ES(object):
         self.n_years = len(self.files_paths)
         self.n_samples_year = []
 
+        for filename in self.files_paths:
+            with h5py.File(filename, 'r') as _f:
+                self.n_samples_year.append(_f["fields"].shape[0])
+
         with h5py.File(self.files_paths[0], 'r') as _f:
             logging.info("Getting file stats from {}".format(self.files_paths[0]))
-            self.n_samples_year.append(_f["fields"].shape[0])
             self.img_shape_x = self.img_size[0]
             self.img_shape_y = self.img_size[1]
             assert(self.img_shape_x <= _f['fields'].shape[2] and self.img_shape_y <= _f['fields'].shape[3]), 'image shapes are greater than dataset image shapes'
