@@ -9,12 +9,12 @@
 #SBATCH --cpus-per-task=32
 #SBATCH --image=nersc/pytorch:ngc-23.07-v0
 #SBATCH --module=gpu,nccl-2.18
-#SBATCH -J vit_l2
+#SBATCH -J sfno-dali
 #SBATCH -o %x-%j.out
 
-config_file=./config/vit.yaml
+config_file=./config/sfno.yaml
 config=$1
-run_num='0'
+run_num='00'
 
 export FI_MR_CACHE_MONITOR=userfaultfd
 export HDF5_USE_FILE_LOCKING=FALSE
