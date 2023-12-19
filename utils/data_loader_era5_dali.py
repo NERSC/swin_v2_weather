@@ -59,7 +59,8 @@ class DaliDataLoader(object):
                                           layout = ["CHW", "CHW"],
                                           batch = False,
                                           no_copy = True,
-                                          parallel = True)
+                                          parallel = True,
+                                          prefetch_queue_depth = self.num_data_workers)
             
             if self.add_zenith:
                 inp, tar, izen, tzen = data
