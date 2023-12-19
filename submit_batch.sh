@@ -9,10 +9,10 @@
 #SBATCH --cpus-per-task=32
 #SBATCH --image=nersc/pytorch:ngc-23.07-v0
 #SBATCH --module=gpu,nccl-2.18
-#SBATCH -J sfno-dali
+#SBATCH -J swin-dali
 #SBATCH -o %x-%j.out
 
-config_file=./config/sfno.yaml
+config_file=./config/swin.yaml
 config=$1
 run_num='00'
 

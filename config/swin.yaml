@@ -11,7 +11,8 @@ swin: &SWIN
   full_pos_embed: true
   rel_pos: false
   mlp_ratio: 4
-  activation_ckpt: true
+  activation_ckpt: false
+  checkpointing: false
 
   # general
   log_to_screen: true
@@ -44,6 +45,7 @@ swin: &SWIN
   global_means_path: '/pscratch/sd/j/jpathak/34var/stats/global_means.npy'
   global_stds_path:  '/pscratch/sd/j/jpathak/34var/stats/global_stds.npy'
   exp_dir: '/pscratch/sd/s/shas1693/results/swin'
+  data_loader_config: "dali"
 
 
 swin_73var: &73var
@@ -141,6 +143,13 @@ swin_73var_short:
   max_epochs: 8
   log_to_wandb: true
 
-swin_73var_geo:
+swin_73var_geo: &swin
   <<: *73var
   loss_type: 'geo'
+
+swin_73var_geo_depth12:
+  <<: *swin
+  loss_type: 'geo'
+  depth: 12
+  drop_path_rate: 0.1
+  data_loader_config: "dali"
