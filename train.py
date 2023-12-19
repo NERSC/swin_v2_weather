@@ -215,8 +215,11 @@ class Trainer():
         else:
             self.scheduler = None
 
+        num_p = self.count_parameters()
         if self.log_to_screen:
             logging.info(self.model)
+            logging.info("Number of parameters = {}".format(num_p))
+
 
         # launch training
         self.train()
@@ -256,6 +259,7 @@ class Trainer():
 
             if self.log_to_screen:
                 logging.info('Time taken for epoch {} is {} sec'.format(epoch + 1, time.time()-start))
+                logging.info('Training time = {}, Valid time = {}'.format(tr_time, valid_time))
                 logging.info('Train loss: {}. Valid loss: {}'.format(train_logs['loss'], valid_logs['valid_loss']))
 
 
@@ -328,6 +332,8 @@ class Trainer():
         if dist.is_initialized():
             dist.all_reduce(valid_buff)
             dist.all_reduce(valid_weighted_rmse)
+
+        valid_time = time.time() - valid_start
 
         # divide by number of steps
         valid_buff[0:2] = valid_buff[0:2] / valid_buff[2]
