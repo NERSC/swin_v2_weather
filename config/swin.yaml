@@ -170,6 +170,7 @@ swin_73var_geo_depth12_chweight:
   drop_path_rate: 0.1
   data_loader_config: "dali"
   residual: True
+  add_zenith: True
 
 swin_73var_geo_depth12_chweight_invar:
   <<: *swin
