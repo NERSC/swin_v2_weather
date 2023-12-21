@@ -50,7 +50,8 @@ def swinv2net(params, checkpoint_stages=False):
                   full_pos_embed=params.full_pos_embed,
                   rel_pos=params.rel_pos,
                   mlp_ratio=params.mlp_ratio,
-                  checkpoint_stages=checkpoint_stages
+                  checkpoint_stages=checkpoint_stages,
+                  residual=params.residual
     )
                   
 
@@ -685,6 +686,7 @@ class SwinTransformerV2Cr(nn.Module):
         full_pos_embed: bool = False,
         rel_pos: bool = True,
         checkpoint_stages: bool = False,
+        residual:  bool = False,
         **kwargs: Any
     ) -> None:
         super(SwinTransformerV2Cr, self).__init__()
@@ -700,6 +702,7 @@ class SwinTransformerV2Cr(nn.Module):
         self.feature_info = []
         self.full_pos_embed = full_pos_embed
         self.checkpoint_stages = checkpoint_stages
+        self.residual = residual
         self.depth = len(depths)
 
         self.patch_embed = PatchEmbed(
@@ -771,8 +774,14 @@ class SwinTransformerV2Cr(nn.Module):
         return x
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if self.residual:
+            skip = x
+        else:
+            skip = torch.zeros_like(x)
         x = self.forward_features(x)
         x = self.forward_head(x)
+
+        x = x + skip[:,:self.out_chans,:,:]
         return x
 
     def update_input_size(

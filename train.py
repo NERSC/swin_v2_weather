@@ -29,7 +29,8 @@ from utils import get_data_loader_distributed
 from utils.weighted_acc_rmse import weighted_rmse_torch
 from utils.loss import LpLoss, GeometricLpLoss
 from utils.img_utils import vis
-from utils.preprocess_utils import preprocess
+from utils.preprocess_utils import PreProcessor
+from utils.losses import LossHandler
 
 from networks.helpers import get_model
 
@@ -93,6 +94,10 @@ class Trainer():
         self.params['n_out_channels'] = len(self.params['out_channels'])
 
         if self.params.add_zenith:
+            self.params.n_in_channels += 1
+        if self.params.add_landmask:
+            self.params.n_in_channels += 2
+        if self.params.add_orography:
             self.params.n_in_channels += 1
 
         # init wandb
@@ -160,15 +165,16 @@ class Trainer():
                 with open(os.path.join(self.params['experiment_dir'], 'hyperparams.yaml'), 'w') as hpfile:
                     yaml.dump(hparams, hpfile)
 
-        if self.params.loss_type == 'l2':
-            self.loss_obj = LpLoss()
-        elif self.params.loss_type == 'geo':
-            self.loss_obj = GeometricLpLoss(img_size=tuple(self.params.img_size), device=self.device)
+        #if self.params.loss_type == 'l2':
+        #    self.loss_obj = LpLoss()
+        #elif self.params.loss_type == 'geo':
+        #    self.loss_obj = GeometricLpLoss(img_size=tuple(self.params.img_size), device=self.device)
+        self.loss_obj =  LossHandler(self.params).to(self.device)
         self.model = get_model(self.params).to(self.device) 
 
 
         # data preproc
-        self.preprocess = preprocess
+        self.preprocessor = PreProcessor(self.params).to(self.device)
 
         if self.log_to_wandb:
             wandb.watch(self.model)
@@ -272,12 +278,12 @@ class Trainer():
         
         for i, data in enumerate(self.train_data_loader, 0):
             tr_start = time.time()
-            data = self.preprocess(self.params, data)
+            data = self.preprocessor(data)
             inp, tar = map(lambda x: x.to(self.device, dtype = torch.float), data)      
             self.model.zero_grad()
             with amp.autocast(self.params.enable_amp):
                 gen = self.model(inp).to(self.device, dtype = torch.float)
-                loss = self.loss_obj(gen, tar)
+                loss = self.loss_obj(gen, tar, inp)
 
             if self.params.enable_amp:
                 self.gscaler.scale(loss).backward()
@@ -318,10 +324,10 @@ class Trainer():
         sample_idx = np.random.randint(len(self.valid_data_loader))
         with torch.no_grad():
             for i, data in enumerate(self.valid_data_loader, 0):
-                data = self.preprocess(self.params, data)
+                data = self.preprocessor(data)
                 inp, tar  = map(lambda x: x.to(self.device, dtype = torch.float), data)
                 gen = self.model(inp).to(self.device, dtype = torch.float)
-                valid_loss += self.loss_obj(gen, tar) 
+                valid_loss += self.loss_obj(gen, tar, inp) 
                 valid_steps += 1.
                 valid_weighted_rmse += weighted_rmse_torch(gen, tar)
 

@@ -13,6 +13,7 @@ swin: &SWIN
   mlp_ratio: 4
   activation_ckpt: false
   checkpointing: false
+  residual: False
 
   # general
   log_to_screen: true
@@ -32,7 +33,8 @@ swin: &SWIN
   finetune: false
   dt: 1 # time step
   add_zenith: false
-  loss_type: 'l2'
+  loss: 'l2'
+  channel_weights: 'none'
 
   # data
   img_size: [720, 1440]
@@ -46,7 +48,7 @@ swin: &SWIN
   global_stds_path:  '/pscratch/sd/j/jpathak/34var/stats/global_stds.npy'
   exp_dir: '/pscratch/sd/s/shas1693/results/swin'
   data_loader_config: "dali"
-
+  model_grid_type: "equiangular"
 
 swin_73var: &73var
   <<: *SWIN
@@ -60,6 +62,12 @@ swin_73var: &73var
   time_means_path:   '/pscratch/sd/p/pharring/73var-6hourly/staging/stats/time_means.npy'
   global_means_path: '/pscratch/sd/p/pharring/73var-6hourly/staging/stats/global_means.npy'
   global_stds_path:  '/pscratch/sd/p/pharring/73var-6hourly/staging/stats/global_stds.npy'
+  time_diff_means_path: '/pscratch/sd/p/pharring/73var-6hourly/staging/stats/time_diff_means.npy'
+  time_diff_stds_path: '/pscratch/sd/p/pharring/73var-6hourly/staging/stats/time_diff_stds.npy'
+  add_orography: False
+  orography_path: '/pscratch/sd/p/pharring/73var-6hourly/staging/invariants/orog.nc'
+  add_landmask: False
+  landmask_path: '/pscratch/sd/p/pharring/73var-6hourly/staging/invariants/lsm.nc'
   add_zenith: false
   track_channels: ['u10m','v10m','t2m','tcwv']
   channel_names:
@@ -145,11 +153,33 @@ swin_73var_short:
 
 swin_73var_geo: &swin
   <<: *73var
-  loss_type: 'geo'
+  loss: 'squared geometric l2'
 
 swin_73var_geo_depth12:
   <<: *swin
-  loss_type: 'geo'
+  loss: 'squared geometric l2'
   depth: 12
   drop_path_rate: 0.1
   data_loader_config: "dali"
+
+swin_73var_geo_depth12_chweight:
+  <<: *swin
+  loss: 'weighted absolute temp-std squared geometric l2'
+  channel_weights: 'auto'
+  depth: 12
+  drop_path_rate: 0.1
+  data_loader_config: "dali"
+  residual: True
+
+swin_73var_geo_depth12_chweight_invar:
+  <<: *swin
+  loss: 'weighted absolute temp-std squared geometric l2'
+  channel_weights: 'auto'
+  depth: 12
+  drop_path_rate: 0.1
+  data_loader_config: "dali"
+  add_zenith: True
+  add_orography: True
+  add_landmask: True
+  residual: True
+
