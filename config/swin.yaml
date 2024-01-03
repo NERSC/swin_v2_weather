@@ -172,7 +172,7 @@ swin_73var_geo_depth12_chweight:
   residual: True
   add_zenith: True
 
-swin_73var_geo_depth12_chweight_invar:
+swin_73var_geo_depth12_chweight_invar: &chwt
   <<: *swin
   loss: 'weighted absolute temp-std squared geometric l2'
   channel_weights: 'auto'
@@ -183,4 +183,27 @@ swin_73var_geo_depth12_chweight_invar:
   add_orography: True
   add_landmask: True
   residual: True
+
+swin_73var_geo_depth12_chweight_invar_rel:
+  <<: *swin
+  loss: 'weighted relative temp-std squared geometric l2'
+  channel_weights: 'auto'
+  depth: 12
+  drop_path_rate: 0.1
+  data_loader_config: "dali"
+  add_zenith: True
+  add_orography: True
+  add_landmask: True
+  residual: True
+
+swin_73var_geo_depth12_chweight_invar_direct:
+  <<: *swin
+  loss: 'weighted absolute temp-std squared geometric l2'
+  channel_weights: 'auto'
+  depth: 12
+  drop_path_rate: 0.1
+  data_loader_config: "dali"
+  add_zenith: True
+  add_orography: True
+  add_landmask: True
 

@@ -27,7 +27,6 @@ from ruamel.yaml.comments import CommentedMap as ruamelDict
 # metrics, utils, data
 from utils import get_data_loader_distributed
 from utils.weighted_acc_rmse import weighted_rmse_torch
-from utils.loss import LpLoss, GeometricLpLoss
 from utils.img_utils import vis
 from utils.preprocess_utils import PreProcessor
 from utils.losses import LossHandler
