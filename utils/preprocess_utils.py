@@ -42,7 +42,7 @@ class PreProcessor(nn.Module):
                 else:
                     static_features = torch.cat([static_features, oro], dim=1)
         self.do_add_static_features = static_features is not None
-        if self.do_add_static_feature:
+        if self.do_add_static_features:
             self.register_buffer("static_features", static_features, persistent=False)
 
 
