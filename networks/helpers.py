@@ -13,7 +13,7 @@ class SingleStepWrapper(nn.Module):
         super(SingleStepWrapper, self).__init__()
         self.model = model_handle(params)
 
-    def forward(self, inp):
+    def forward(self, inp, coszen=None):
         y = self.model(inp)
         return y
 
@@ -24,16 +24,22 @@ class MultiStepWrapper(nn.Module):
         super(MultiStepWrapper, self).__init__()
         self.model = model_handle(params)
         self.n_future = params.n_future
+        self.invar = 1*params.add_orography + 2*params.add_landmask
 
-    def forward(self, inp):
+    def forward(self, inp, coszen=None):
         result = []
         inpt = inp
+        invars = inp[:,-self.invar:,:,:] if self.invar else None
         for step in range(self.n_future + 1):
             pred = self.model(inpt)
             result.append(pred)
             if step == self.n_future:
                 break
             inpt = pred
+            if coszen is not None:
+                inpt = torch.cat([inpt, coszen[:,step:step+1,:,:]], dim=1)
+            if self.invar:
+                inpt = torch.cat([inpt, invars], dim=1)
         result = torch.cat(result, dim=1)
         return result
 

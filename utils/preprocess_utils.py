@@ -4,10 +4,11 @@ import numpy as np
 
 class PreProcessor(nn.Module):
 
-    def __init__(self, params):
+    def __init__(self, params, device):
         super(PreProcessor, self).__init__()
         
         self.params = params
+        self.device = device
         imgx, imgy = params.img_size
         
         static_features = None
@@ -49,12 +50,20 @@ class PreProcessor(nn.Module):
     def forward(self, data):
         if self.params.add_zenith:
             # data has inp, tar, izen, tzen
-            inp, tar, izen, tzen = data
+            inp, tar, izen, tzen = map(lambda x: x.to(self.device, dtype = torch.float), data)
             inp = torch.cat([inp, izen], dim=1)  # Concatenate input with zenith angle
         else:
-            inp, tar = data
+            inp, tar = map(lambda x: x.to(self.device, dtype = torch.float), data)
+
+        # flatten out time dim in target along channel dim
+        #b, t, c, h, w = tar.shape
+        #tar = tar.view(b, -1 , h, w) 
 
         if self.do_add_static_features:
             inp = torch.cat([inp, self.static_features], dim=1)
 
-        return inp, tar
+        if self.params.add_zenith:
+            return inp, tar, tzen #map(lambda x: x.to(self.static_features.device, dtype = torch.float), [inp, tar, tzen])
+        else:
+            return inp, tar, None #list(map(lambda x: x.to(self.device, dtype = torch.float), [inp, tar])) + [None]
+

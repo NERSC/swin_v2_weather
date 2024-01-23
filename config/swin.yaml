@@ -207,3 +207,54 @@ swin_73var_geo_depth12_chweight_invar_direct:
   add_orography: True
   add_landmask: True
 
+swin_73var_geo_depth12_chweight_invar_2step:
+  <<: *chwt
+  n_future: 1
+  max_epochs: 15 # est. 30 min per epoch
+  lr: 1e-4
+  finetune: True
+  pretrained_checkpoint_path: '/pscratch/sd/s/shas1693/results/swin/swin_73var_geo_depth12_chweight_invar/00/training_checkpoints/best_ckpt.tar' 
+  data_loader_config: "pytorch"
+
+swin_73var_geo_depth12_chweight_invar_2step_ep30:
+  <<: *chwt
+  n_future: 1
+  max_epochs: 30 # est. 30 min per epoch
+  lr: 1e-4
+  finetune: True
+  pretrained_checkpoint_path: '/pscratch/sd/s/shas1693/results/swin/swin_73var_geo_depth12_chweight_invar/00/training_checkpoints/best_ckpt.tar'
+  data_loader_config: "pytorch"
+
+swin_73var_geo_depth24_chweight_invar:
+  <<: *chwt
+  depth: 24
+
+swin_73var_geo_depth24_e2048_mlp2_chweight_invar:
+  <<: *chwt
+  depth: 24
+  embed_dim: 2048
+  mlp_ratio: 2
+  activation_ckpt: True
+  data_loader_config: "pytorch"
+
+swin_73var_geo_depth12_chweight_invar_4step:
+  <<: *chwt
+  n_future: 3
+  max_epochs: 15 # est. 11.4hrs total: 2 jobs, 6h30m each
+  lr: 1e-4
+  finetune: True
+  pretrained_checkpoint_path: '/pscratch/sd/s/shas1693/results/swin/swin_73var_geo_depth12_chweight_invar/00/training_checkpoints/best_ckpt.tar'
+  data_loader_config: "pytorch"
+  activation_ckpt: True
+  num_data_workers: 2
+
+swin_73var_geo_depth12_chweight_invar_8step:
+  <<: *chwt
+  n_future: 7
+  max_epochs: 15 # est. 22.6hrs total: 4 jobs, 6h30m each
+  lr: 1e-4
+  finetune: True
+  pretrained_checkpoint_path: '/pscratch/sd/s/shas1693/results/swin/swin_73var_geo_depth12_chweight_invar/00/training_checkpoints/best_ckpt.tar'
+  data_loader_config: "pytorch"
+  activation_ckpt: True
+  num_data_workers: 2

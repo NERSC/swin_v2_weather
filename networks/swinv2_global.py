@@ -37,6 +37,7 @@ def swin_from_yaml(fname, checkpoint_stages=False):
 
 
 def swinv2net(params, checkpoint_stages=False):
+    act_ckpt = checkpoint_stages or params.activation_ckpt
     return SwinTransformerV2Cr(
                   img_size=params.img_size,
                   patch_size=params.patch_size,
@@ -50,7 +51,7 @@ def swinv2net(params, checkpoint_stages=False):
                   full_pos_embed=params.full_pos_embed,
                   rel_pos=params.rel_pos,
                   mlp_ratio=params.mlp_ratio,
-                  checkpoint_stages=checkpoint_stages,
+                  checkpoint_stages=act_ckpt,
                   residual=params.residual
     )
                   
@@ -565,11 +566,12 @@ class SwinTransformerV2CrStage(nn.Module):
         extra_norm_stage: bool = False,
         sequential_attn: bool = False,
         rel_pos: bool = True,
+        grad_checkpointing: bool = False,
     ) -> None:
         super(SwinTransformerV2CrStage, self).__init__()
         self.downscale: bool = downscale
-        self.grad_checkpointing: bool = False
         self.feat_size: Tuple[int, int] = (feat_size[0] // 2, feat_size[1] // 2) if downscale else feat_size
+        self.grad_checkpointing = grad_checkpointing
 
         if downscale:
             self.downsample = PatchMerging(embed_dim, norm_layer=norm_layer)
@@ -628,7 +630,7 @@ class SwinTransformerV2CrStage(nn.Module):
         for block in self.blocks:
             # Perform checkpointing if utilized
             if self.grad_checkpointing and not torch.jit.is_scripting():
-                x = checkpoint.checkpoint(block, x)
+                x = checkpoint(block, x, use_reentrant=False)
             else:
                 x = block(x)
         x = bhwc_to_bchw(x)
@@ -739,6 +741,7 @@ class SwinTransformerV2Cr(nn.Module):
                 sequential_attn=sequential_attn,
                 norm_layer=norm_layer,
                 rel_pos=rel_pos,
+                grad_checkpointing=self.checkpoint_stages,
             )]
             self.feature_info += [dict(num_chs=in_dim, reduction=4 * in_scale, module=f'stages.{stage_idx}')]
 
@@ -757,10 +760,7 @@ class SwinTransformerV2Cr(nn.Module):
         x = self.patch_embed(x)
         if self.full_pos_embed:
             x = x + self.pos_embed
-        if self.checkpoint_stages and not torch.jit.is_scripting():
-            x = checkpoint_sequential(self.stages, self.depth, x)
-        else:
-            x = self.stages(x)
+        x = self.stages(x)
         return x
 
     def forward_head(self, x: torch.Tensor) -> torch.Tensor:

@@ -173,7 +173,7 @@ class Trainer():
 
 
         # data preproc
-        self.preprocessor = PreProcessor(self.params).to(self.device)
+        self.preprocessor = PreProcessor(self.params, self.device).to(self.device)
 
         if self.log_to_wandb:
             wandb.watch(self.model)
@@ -275,13 +275,13 @@ class Trainer():
         tr_loss = []
         self.model.train()
         
+        st = time.time()
         for i, data in enumerate(self.train_data_loader, 0):
             tr_start = time.time()
-            data = self.preprocessor(data)
-            inp, tar = map(lambda x: x.to(self.device, dtype = torch.float), data)      
+            inp, tar, coszen = self.preprocessor(data)
             self.model.zero_grad()
             with amp.autocast(self.params.enable_amp):
-                gen = self.model(inp).to(self.device, dtype = torch.float)
+                gen = self.model(inp, coszen=coszen).to(self.device, dtype = torch.float)
                 loss = self.loss_obj(gen, tar, inp)
 
             if self.params.enable_amp:
@@ -323,11 +323,15 @@ class Trainer():
         sample_idx = np.random.randint(len(self.valid_data_loader))
         with torch.no_grad():
             for i, data in enumerate(self.valid_data_loader, 0):
-                data = self.preprocessor(data)
-                inp, tar  = map(lambda x: x.to(self.device, dtype = torch.float), data)
-                gen = self.model(inp).to(self.device, dtype = torch.float)
+                inp, tar, coszen = self.preprocessor(data)
+                gen = self.model(inp, coszen=coszen).to(self.device, dtype = torch.float)
                 valid_loss += self.loss_obj(gen, tar, inp) 
                 valid_steps += 1.
+
+                # compute metrics on final step of rollout when n_future > 1
+                # TODO fix this for dali dataloader
+                tar = tar[:,-self.params.n_out_channels:]
+                gen = gen[:,-self.params.n_out_channels:]
                 valid_weighted_rmse += weighted_rmse_torch(gen, tar)
 
                 if (i == sample_idx) and self.log_to_wandb:

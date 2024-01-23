@@ -97,8 +97,13 @@ class GetDataset(Dataset):
 
     def _normalize(self, img):
         if self.normalize:
-            img -= self.means
-            img /= self.stds
+            means = self.means
+            stds = self.stds
+            if len(img.shape) > 3:
+                means = np.expand_dims(means, 0)
+                stds = np.expand_dims(stds, 0)
+            img -= means
+            img /= stds
         return torch.as_tensor(img)
 
     def _compute_zenith_angle(self, local_idx: int, year_idx: int, time_step_hours: int = 6) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -158,10 +163,12 @@ class GetDataset(Dataset):
         inp_field = self.files[year_idx][local_idx,self.in_channels,0:self.img_shape_x,0:self.img_shape_y]
         tar_field = self.files[year_idx][(local_idx + step):(local_idx + step * (self.n_future + 1) + 1):step, \
                                          self.out_channels,0:self.img_shape_x,0:self.img_shape_y]
-        # flatten time indices
-        tar_field = tar_field.reshape((self.n_out_channels * (self.n_future + 1), self.img_shape_x, self.img_shape_y))
+
         # normalize images if needed
         inp, tar = self._normalize(inp_field), self._normalize(tar_field)
+
+        # flatten time indices
+        tar = tar.reshape((self.n_out_channels * (self.n_future + 1), self.img_shape_x, self.img_shape_y))
 
         if self.params.add_zenith:
             zen_inp, zen_tar = self._compute_zenith_angle(local_idx, year_idx) #compute the zenith angles for the input.
