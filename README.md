@@ -46,7 +46,7 @@ The following subdirectory structure exists for each model used in the preprint.
 
 # Training Configurations
 
-Training configurations can be set up in [config/swin.yaml](swin/AFNO.yaml). The following paths need to be set by the user. These paths should point to the data and stats you downloaded in the steps above:
+Training configurations can be set up in [config/swin.yaml](swin/swin.yaml). The following paths need to be set by the user. These paths should point to the data and stats you downloaded in the steps above:
 
 ``` -->
 <!-- swin: &backbone
