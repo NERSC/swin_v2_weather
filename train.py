@@ -1,9 +1,7 @@
 import os
-import sys
 import time
 import numpy as np
 import argparse
-import h5py
 import torch
 import wandb
 import matplotlib.pyplot as plt
@@ -164,15 +162,11 @@ class Trainer():
                 with open(os.path.join(self.params['experiment_dir'], 'hyperparams.yaml'), 'w') as hpfile:
                     yaml.dump(hparams, hpfile)
 
-        #if self.params.loss_type == 'l2':
-        #    self.loss_obj = LpLoss()
-        #elif self.params.loss_type == 'geo':
-        #    self.loss_obj = GeometricLpLoss(img_size=tuple(self.params.img_size), device=self.device)
         self.loss_obj =  LossHandler(self.params).to(self.device)
         self.model = get_model(self.params).to(self.device) 
 
 
-        # data preproc
+        # data preprocessing
         self.preprocessor = PreProcessor(self.params, self.device).to(self.device)
 
         if self.log_to_wandb:

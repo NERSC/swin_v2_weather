@@ -2,10 +2,7 @@ import torch
 import torch.nn as nn
 from functools import partial
 # networks
-from networks.afno import AFNONet
 from networks.swinv2_global import swinv2net
-from networks.vit import ViT
-from networks.sfno import sfnonet
 
 class SingleStepWrapper(nn.Module):
     """Wrapper for training a single step into the future"""
@@ -44,14 +41,8 @@ class MultiStepWrapper(nn.Module):
         return result
 
 def get_model(params):
-    if params.nettype == 'afno':
-        model = partial(AFNONet)
-    elif params.nettype == 'sfno':
-        model = partial(sfnonet)
-    elif params.nettype == 'swin':
+    if params.nettype == 'swin':
         model = partial(swinv2net)
-    elif params.nettype == 'vit':
-        model = partial(ViT)
     else:
         raise Exception(f"model type {params.nettype} not implemented")
 

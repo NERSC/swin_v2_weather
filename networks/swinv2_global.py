@@ -11,6 +11,24 @@ from torch.utils.checkpoint import checkpoint, checkpoint_sequential
 
 from timm.layers import DropPath, Mlp, ClassifierHead, to_2tuple, _assert
 
+"""
+Adapted from timm v0.9.2:
+ https://github.com/huggingface/pytorch-image-models/blob/v0.9.2/timm/models/swin_transformer_v2_cr.py
+ 
+ which is a PyTorch impl of : `Swin Transformer V2: Scaling Up Capacity and Resolution`
+    - https://arxiv.org/pdf/2111.09883
+
+Key components of the module:
+- PatchEmbed: Converts a 2D image to a sequence of flattened, non-overlapping patches and embeds them.
+- SwinTransformerV2CrBlock: Implements a block of the Swin Transformer with options for relative positional biases and shifted windows for attention.
+- SwinTransformerV2CrStage: Defines a stage in the Swin Transformer, potentially with multiple layers of SwinTransformerV2CrBlock.
+- SwinTransformerV2Cr: The main class representing the Swin Transformer V2 model, handling the overall architecture setup, including stacking of stages and producing final outputs.
+- WindowMultiHeadAttention and WindowMultiHeadAttentionNoPos: Implement multi-head self-attention mechanisms over windows of the input feature map, with optional relative positional encoding.
+
+Functions:
+- bchw_to_bhwc, bhwc_to_bchw: Utility functions to transpose tensors between the batch-channel-height-width (BCHW) format and the batch-height-width-channel (BHWC) format.
+- window_partition, window_reverse: Functions to partition a feature map into windows and to reverse this partitioning, respectively.
+"""
 
 # Adapted from timm v0.9.2:
 # https://github.com/huggingface/pytorch-image-models/blob/v0.9.2/timm/models/swin_transformer_v2_cr.py

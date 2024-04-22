@@ -46,7 +46,7 @@ swin: &SWIN
   time_means_path:   '/pscratch/sd/j/jpathak/34var/stats/time_means.npy'
   global_means_path: '/pscratch/sd/j/jpathak/34var/stats/global_means.npy'
   global_stds_path:  '/pscratch/sd/j/jpathak/34var/stats/global_stds.npy'
-  exp_dir: '/pscratch/sd/s/shas1693/results/swin'
+  exp_dir: '/pscratch/sd/j/jwillard/FCN_exp/era5_wind/'
   data_loader_config: "dali"
   model_grid_type: "equiangular"
 
@@ -162,6 +162,7 @@ swin_73var_geo_depth12:
   drop_path_rate: 0.1
   data_loader_config: "dali"
 
+
 swin_73var_geo_depth12_chweight:
   <<: *swin
   loss: 'weighted absolute temp-std squared geometric l2'
@@ -176,6 +177,20 @@ swin_73var_geo_depth12_chweight_invar: &chwt
   <<: *swin
   loss: 'weighted absolute temp-std squared geometric l2'
   channel_weights: 'auto'
+  depth: 12
+  drop_path_rate: 0.1
+  data_loader_config: "dali"
+  add_zenith: True
+  add_orography: True
+  add_landmask: True
+  residual: True
+
+swin_73var_geo_depth12_chweight_invar_int: &chwt
+  <<: *swin
+  loss: 'weighted absolute temp-std squared geometric l2'
+  channel_weights: 'auto'
+  batch_size: 4
+  log_to_wandb: False
   depth: 12
   drop_path_rate: 0.1
   data_loader_config: "dali"
@@ -251,6 +266,20 @@ swin_73var_geo_depth12_chweight_invar_4step:
 swin_73var_geo_depth12_chweight_invar_8step:
   <<: *chwt
   n_future: 7
+  max_epochs: 15 # est. 22.6hrs total: 4 jobs, 6h30m each
+  lr: 1e-4
+  finetune: True
+  pretrained_checkpoint_path: '/pscratch/sd/s/shas1693/results/swin/swin_73var_geo_depth12_chweight_invar/00/training_checkpoints/best_ckpt.tar'
+  data_loader_config: "pytorch"
+  activation_ckpt: True
+  num_data_workers: 2
+
+
+swin_73var_geo_depth12_chweight_invar_8step_int:
+  <<: *chwt
+  n_future: 7
+  batch_size: 4
+  log_to_wandb: False
   max_epochs: 15 # est. 22.6hrs total: 4 jobs, 6h30m each
   lr: 1e-4
   finetune: True
