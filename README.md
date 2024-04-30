@@ -16,7 +16,7 @@ SwinV2_Weather is based on the original Swin Transformer V2 architecture propose
 
 ## Quick Links:
 
-[Model Registry](https://portal.nersc.gov/cfs/dasrepo/swin_model_weights/)
+[Model Registry](https://portal.nersc.gov/cfs/dasrepo/swin_model_registry/)
 
 [Precomputed Stats](https://portal.nersc.gov/cfs/dasrepo/swin_stats/)
 
