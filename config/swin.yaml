@@ -19,8 +19,8 @@ swin: &SWIN
   log_to_screen: true
   log_to_wandb:  true
   save_checkpoint: true
-  project: 'ERA5_swin'
-  entity: 'weatherbenching'
+  project: 'wandb_project'
+  entity: 'wandb_entity'
 
   # optimizer and other params
   optimizer_type: 'adam'
