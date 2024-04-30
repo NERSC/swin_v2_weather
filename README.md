@@ -49,8 +49,7 @@ The following subdirectory structure exists for each model used in the preprint.
 Training configurations can be set up in [config/swin.yaml](config/swin.yaml). The following paths need to be set by the user. These paths should point to the data and stats you downloaded in the steps above:
 
 ``` -->
-<!-- swin: &backbone
-  <<: *FULL_FIELD
+<!-- swin_73var: &73var
   ...
   ...
   orography: !!bool False 
@@ -66,6 +65,8 @@ Training configurations can be set up in [config/swin.yaml](config/swin.yaml). T
   time_diff_stds_path:  # full path to time_diff_stds.npy
   orography_path:       # full path to orography.h5 file
   landmask_path:        # full path to landmask.h5 file
+  project: 'wandb_project' #fill in wandb project
+  entity: 'wandb_entity'   #fill in wandb entity
 
 ```
 
