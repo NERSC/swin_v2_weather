@@ -1,0 +1,263 @@
+### base config ###
+swin_73var: &73var
+  #swin hyperparams
+  nettype: 'swin'
+  embed_dim: 768
+  depth: 24
+  patch_size: 4
+  window_ratio: 80
+  num_heads: 8
+  drop_path_rate: 0.1
+  full_pos_embed: true
+  rel_pos: false
+  mlp_ratio: 4
+  activation_ckpt: false
+  checkpointing: false
+  residual: False
+
+  # general
+  log_to_screen: true
+  log_to_wandb: true
+  save_checkpoint: true
+  project: 'your_wandb_project'
+  entity: 'your_wandb_entity'
+  exp_dir: '/pscratch/sd/j/jwillard/FCN_exp/era5_wind/'
+
+
+  # optimizer and other params
+  optimizer_type: 'adam'
+  scheduler: 'CosineAnnealingLR'
+  max_epochs: 70
+  lr: 1E-3
+  batch_size: 64
+  num_data_workers: 8
+  n_future: 0 # for many future time steps
+  finetune: false
+  dt: 1 # time step
+  add_zenith: false
+  loss: 'l2'
+  channel_weights: 'none'
+
+  # data
+  img_size: [720, 1440]
+  in_channels: [0, 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+  out_channels: [0, 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+  train_data_path:   '/pscratch/sd/p/pharring/73var-6hourly/staging/train'
+  valid_data_path:   '/pscratch/sd/p/pharring/73var-6hourly/staging/test'
+  inf_data_path:     '/pscratch/sd/p/pharring/73var-6hourly/staging/out_of_sample'
+  time_means_path:   '/pscratch/sd/p/pharring/73var-6hourly/staging/stats/time_means.npy'
+  global_means_path: '/pscratch/sd/p/pharring/73var-6hourly/staging/stats/global_means.npy'
+  global_stds_path:  '/pscratch/sd/p/pharring/73var-6hourly/staging/stats/global_stds.npy'
+  time_diff_means_path: '/pscratch/sd/p/pharring/73var-6hourly/staging/stats/time_diff_means.npy'
+  time_diff_stds_path: '/pscratch/sd/p/pharring/73var-6hourly/staging/stats/time_diff_stds.npy'
+  add_orography: False
+  orography_path: '/pscratch/sd/p/pharring/73var-6hourly/staging/invariants/orog.nc'
+  add_landmask: False
+  landmask_path: '/pscratch/sd/p/pharring/73var-6hourly/staging/invariants/lsm.nc'
+  model_grid_type: "equiangular"
+  data_loader_config: "dali"
+  track_channels: ['u10m','v10m','t2m','tcwv']
+  channel_names:
+    - u10m
+    - v10m
+    - u100m
+    - v100m
+    - t2m
+    - sp
+    - msl
+    - tcwv
+    - u50
+    - u100
+    - u150
+    - u200
+    - u250
+    - u300
+    - u400
+    - u500
+    - u600
+    - u700
+    - u850
+    - u925
+    - u1000
+    - v50
+    - v100
+    - v150
+    - v200
+    - v250
+    - v300
+    - v400
+    - v500
+    - v600
+    - v700
+    - v850
+    - v925
+    - v1000
+    - z50
+    - z100
+    - z150
+    - z200
+    - z250
+    - z300
+    - z400
+    - z500
+    - z600
+    - z700
+    - z850
+    - z925
+    - z1000
+    - t50
+    - t100
+    - t150
+    - t200
+    - t250
+    - t300
+    - t400
+    - t500
+    - t600
+    - t700
+    - t850
+    - t925
+    - t1000
+    - q50
+    - q100
+    - q150
+    - q200
+    - q250
+    - q300
+    - q400
+    - q500
+    - q600
+    - q700
+    - q850
+    - q925
+    - q1000
+
+swin_73var_short:
+  <<: *73var
+  batch_size: 4
+  max_epochs: 8
+  log_to_wandb: true
+
+swin_73var_geo: &swin
+  <<: *73var
+  loss: 'squared geometric l2'
+
+swin_73var_geo_depth12:
+  <<: *swin
+  loss: 'squared geometric l2'
+  depth: 12
+  drop_path_rate: 0.1
+  data_loader_config: "dali"
+
+
+swin_73var_geo_depth12_chweight:
+  <<: *swin
+  loss: 'weighted absolute temp-std squared geometric l2'
+  channel_weights: 'auto'
+  depth: 12
+  drop_path_rate: 0.1
+  data_loader_config: "dali"
+  residual: True
+  add_zenith: True
+
+swin_73var_geo_depth12_chweight_invar: &chwt
+  <<: *swin
+  loss: 'weighted absolute temp-std squared geometric l2'
+  channel_weights: 'auto'
+  depth: 12
+  drop_path_rate: 0.1
+  data_loader_config: "dali"
+  add_zenith: True
+  add_orography: True
+  add_landmask: True
+  residual: True
+
+
+swin_73var_geo_depth12_chweight_invar_rel:
+  <<: *swin
+  loss: 'weighted relative temp-std squared geometric l2'
+  channel_weights: 'auto'
+  depth: 12
+  drop_path_rate: 0.1
+  data_loader_config: "dali"
+  add_zenith: True
+  add_orography: True
+  add_landmask: True
+  residual: True
+
+swin_73var_geo_depth12_chweight_invar_direct:
+  <<: *swin
+  loss: 'weighted absolute temp-std squared geometric l2'
+  channel_weights: 'auto'
+  depth: 12
+  drop_path_rate: 0.1
+  data_loader_config: "dali"
+  add_zenith: True
+  add_orography: True
+  add_landmask: True
+
+swin_73var_geo_depth12_chweight_invar_2step:
+  <<: *chwt
+  n_future: 1
+  max_epochs: 15 # est. 30 min per epoch
+  lr: 1e-4
+  finetune: True
+  pretrained_checkpoint_path: '/pscratch/sd/s/shas1693/results/swin/swin_73var_geo_depth12_chweight_invar/00/training_checkpoints/best_ckpt.tar' 
+  data_loader_config: "pytorch"
+
+swin_73var_geo_depth12_chweight_invar_2step_ep30:
+  <<: *chwt
+  n_future: 1
+  max_epochs: 30 # est. 30 min per epoch
+  lr: 1e-4
+  finetune: True
+  pretrained_checkpoint_path: '/pscratch/sd/s/shas1693/results/swin/swin_73var_geo_depth12_chweight_invar/00/training_checkpoints/best_ckpt.tar'
+  data_loader_config: "pytorch"
+
+swin_73var_geo_depth24_chweight_invar:
+  <<: *chwt
+  depth: 24
+
+swin_73var_geo_depth24_e2048_mlp2_chweight_invar:
+  <<: *chwt
+  depth: 24
+  embed_dim: 2048
+  mlp_ratio: 2
+  activation_ckpt: True
+  data_loader_config: "pytorch"
+
+swin_73var_geo_depth12_chweight_invar_4step:
+  <<: *chwt
+  n_future: 3
+  max_epochs: 15 # est. 11.4hrs total: 2 jobs, 6h30m each
+  lr: 1e-4
+  finetune: True
+  pretrained_checkpoint_path: '/pscratch/sd/s/shas1693/results/swin/swin_73var_geo_depth12_chweight_invar/00/training_checkpoints/best_ckpt.tar'
+  data_loader_config: "pytorch"
+  activation_ckpt: True
+  num_data_workers: 2
+
+swin_73var_geo_depth12_chweight_invar_8step:
+  <<: *chwt
+  n_future: 7
+  max_epochs: 15 # est. 22.6hrs total: 4 jobs, 6h30m each
+  lr: 1e-4
+  finetune: True
+  pretrained_checkpoint_path: '/pscratch/sd/s/shas1693/results/swin/swin_73var_geo_depth12_chweight_invar/00/training_checkpoints/best_ckpt.tar'
+  data_loader_config: "pytorch"
+  activation_ckpt: True
+  num_data_workers: 2
+
+
+swin_73var_geo_depth12_chweight_invar_8step_int:
+  <<: *chwt
+  n_future: 7
+  batch_size: 4
+  log_to_wandb: False
+  max_epochs: 15 # est. 22.6hrs total: 4 jobs, 6h30m each
+  lr: 1e-4
+  finetune: True
+  pretrained_checkpoint_path: '/pscratch/sd/s/shas1693/results/swin/swin_73var_geo_depth12_chweight_invar/00/training_checkpoints/best_ckpt.tar'
+  data_loader_config: "pytorch"
+  activation_ckpt: True
+  num_data_workers: 2
