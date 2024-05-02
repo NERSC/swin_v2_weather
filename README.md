@@ -80,11 +80,13 @@ For inference and scoring we used [Earth2MIP](https://github.com/NVIDIA/earth2mi
 
 If you find this work useful, cite it using:
 ```
-@article{TODO BIBTEX CITION HERE ONCE ON ARXIV,
-  title={Analyzing and Exploring Training Recipes for Large-Scale Transformer-Based Weather Prediction},
-  author={},
-  journal={},
-  year={2024}
+@misc{willard2024analyzing,
+      title={Analyzing and Exploring Training Recipes for Large-Scale Transformer-Based Weather Prediction}, 
+      author={Jared D. Willard and Peter Harrington and Shashank Subramanian and Ankur Mahesh and Travis A. O'Brien and William D. Collins},
+      year={2024},
+      eprint={2404.19630},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG}
 }
 ```
 
