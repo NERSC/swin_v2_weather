@@ -64,7 +64,6 @@ def swinv2net(params, checkpoint_stages=False):
                   in_chans=params.n_in_channels,
                   out_chans=params.n_out_channels,
                   embed_dim=params.embed_dim,
-                #   img_window_ratio=params.window_ratio,
                   attn_window_size=params.attn_window_size,
                   drop_path_rate=params.drop_path_rate,
                   full_pos_embed=params.full_pos_embed,
@@ -362,7 +361,6 @@ class SwinTransformerV2CrBlock(nn.Module):
         self.feat_size: Tuple[int, int] = feat_size
         self.target_shift_size: Tuple[int, int] = to_2tuple(shift_size)
         self.window_size, self.shift_size = self._calc_window_shift(to_2tuple(window_size))
-        print("window size SwinTransformerV2CrBlock: ", self.window_size)
         self.window_area = self.window_size[0] * self.window_size[1]
         self.init_values: Optional[float] = init_values
         window_attn_block = WindowMultiHeadAttention if rel_pos else WindowMultiHeadAttentionNoPos
@@ -439,7 +437,6 @@ class SwinTransformerV2CrBlock(nn.Module):
             new_feat_size (Tuple[int, int]): New input resolution
         """
         # Update input resolution
-        pdb.set_trace()
         self.feat_size: Tuple[int, int] = new_feat_size
         self.window_size, self.shift_size = self._calc_window_shift(to_2tuple(new_window_size))
         self.window_area = self.window_size[0] * self.window_size[1]
@@ -687,8 +684,6 @@ class SwinTransformerV2Cr(nn.Module):
         self,
         img_size: Tuple[int, int] = (224, 224),
         patch_size: int = 4,
-        # window_size: Optional[int] = None,
-        # img_window_ratio: int = 32,
         attn_window_size: Tuple[int, int] = (9, 18),
         in_chans: int = 3,
         out_chans: int = 3,
@@ -715,13 +710,10 @@ class SwinTransformerV2Cr(nn.Module):
     ) -> None:
         super(SwinTransformerV2Cr, self).__init__()
         img_size = to_2tuple(img_size)
-        # window_size = tuple([
-        #     s // img_window_ratio for s in img_size]) if window_size is None else to_2tuple(window_size)
 
         self.patch_size: int = patch_size
         self.img_size: Tuple[int, int] = img_size
         self.window_size: int = attn_window_size
-        print("self.window_size in SwinTransformerV2Cr: ", self.window_size)
         self.num_features: int = int(embed_dim)
         self.out_chans: int = out_chans
         self.feature_info = []
