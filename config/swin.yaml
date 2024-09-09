@@ -3,9 +3,10 @@ swin_73var: &73var
   #swin hyperparams
   nettype: 'swin'
   embed_dim: 768
-  depth: 24
+  depth: 12
   patch_size: 4
   window_ratio: 80
+  attn_window_size: [9, 18]
   num_heads: 8
   drop_path_rate: 0.1
   full_pos_embed: true
@@ -19,8 +20,8 @@ swin_73var: &73var
   log_to_screen: true
   log_to_wandb: true
   save_checkpoint: true
-  project: 'your_wandb_project'
-  entity: 'your_wandb_entity'
+  project: 'era5_swin'
+  entity: 'weatherbenching'
   exp_dir: '/pscratch/sd/j/jwillard/FCN_exp/era5_wind/'
 
 
@@ -149,7 +150,81 @@ swin_73var_geo_depth12:
   drop_path_rate: 0.1
   data_loader_config: "dali"
 
+swin_73var_geo_depth12_int:
+  <<: *swin
+  loss: 'squared geometric l2'
+  depth: 12
+  drop_path_rate: 0.1
+  data_loader_config: "norm"
+  batch_size: 1
+  log_to_wandb: False
 
+swin_73var_geo_depth12_patch8:
+  <<: *swin
+  loss: 'squared geometric l2'
+  depth: 12
+  patch_size: 8
+  attn_window_size: [5,10]
+  drop_path_rate: 0.1
+  data_loader_config: "dali"
+
+swin_73var_geo_depth12_patch16:
+  <<: *swin
+  loss: 'squared geometric l2'
+  depth: 12
+  patch_size: 16
+  attn_window_size: [3,6]
+  drop_path_rate: 0.1
+  data_loader_config: "dali"
+
+swin_73var_geo_depth12_patch16_int:
+  <<: *swin
+  loss: 'squared geometric l2'
+  depth: 12
+  patch_size: 16
+  attn_window_size: [3,6]
+  drop_path_rate: 0.1
+  data_loader_config: "norm"
+  batch_size: 1
+  log_to_wandb: False
+
+swin_73var_geo_depth12_patch32:
+  <<: *swin
+  loss: 'squared geometric l2'
+  depth: 12
+  patch_size: 32
+  attn_window_size: [2,5]
+  drop_path_rate: 0.1
+  data_loader_config: "dali"
+
+swin_73var_geo_depth12_patch32_int:
+  <<: *swin
+  loss: 'squared geometric l2'
+  depth: 12
+  patch_size: 32
+  attn_window_size: [2,5]
+  drop_path_rate: 0.1
+  batch_size: 1
+  log_to_wandb: false
+  data_loader_config: "norm"
+
+swin_73var_geo_depth24_e384:
+  <<: *swin
+  loss: 'squared geometric l2'
+  depth: 24
+  embed_dim: 384
+  drop_path_rate: 0.1
+  data_loader_config: "dali"
+
+swin_73var_geo_depth12_e768_mlp6:
+  <<: *swin
+  loss: 'squared geometric l2'
+  depth: 12
+  embed_dim: 768
+  mlp_ratio: 6
+  drop_path_rate: 0.1
+  data_loader_config: "dali"
+  
 swin_73var_geo_depth12_chweight:
   <<: *swin
   loss: 'weighted absolute temp-std squared geometric l2'
