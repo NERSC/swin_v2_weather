@@ -3,7 +3,7 @@
 <img src="assets/nersc.png" width="200px" style="vertical-align: middle;"> <img src="assets/ucberk.png" width="250px" style="vertical-align: middle;"> <img src="assets/indiana.png" width="50px" style="vertical-align: middle;">
 
 
-This repository contains the code used for "Analyzing and Exploring Training Recipes for Large-Scale Transformer-Based Weather Prediction" \[[paper](https://arxiv.org/abs/XXX.XXXXX)\]
+This repository contains the code used for "Analyzing and Exploring Training Recipes for Large-Scale Transformer-Based Weather Prediction" \[[paper](https://arxiv.org/abs/2404.19630)\]
 
 The code was developed by the authors of the preprint: 
 [Jared Willard](https://www.linkedin.com/in/jareddwillard/), [Shashank Subramanian](https://www.nersc.gov/about/nersc-staff/data-analytics-services/shashank-subramanian/), [Peter Harrington](https://www.nersc.gov/about/nersc-staff/data-analytics-services/peter-harrington/), [Ankur Mahesh](https://eps.berkeley.edu/people/ankur-mahesh), [Travis O'Brien](https://earth.indiana.edu/directory/faculty/obrien-travis.html), and [William Collins](https://profiles.lbl.gov/11626-william-collins)
